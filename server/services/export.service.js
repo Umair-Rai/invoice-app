@@ -2,8 +2,9 @@ const db = require('../db');
 const path = require('path');
 const fs = require('fs');
 const ExcelJS = require('exceljs');
-const PDFDocument = require('pdfkit');
 const archiver = require('archiver');
+const ejs = require('ejs');
+const puppeteer = require('puppeteer');
 const { getInvoiceById } = require('./invoice.service');
 const { getSettings } = require('./settings.service');
 
@@ -188,7 +189,7 @@ async function exportInvoicesToExcel(invoiceIds) {
 }
 
 /**
- * Generate a structured invoice PDF matching the template.
+ * Generate a PDF by rendering the print.ejs view and converting with Puppeteer.
  * @param {number} invoiceId
  * @returns {Promise<Buffer>} PDF buffer
  */
@@ -200,418 +201,84 @@ async function generateInvoicePDF(invoiceId) {
 
   const { invoice, items } = data;
   const settings = getSettings();
-  const isArabic = invoice.lang === 'ar';
 
-  return new Promise((resolve, reject) => {
-    const margin = 36;
-    const doc = new PDFDocument({ size: 'A4', margin });
-    const chunks = [];
-    doc.on('data', chunk => chunks.push(chunk));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
+  // ── Render the print.ejs partial ──
+  const viewsDir = path.join(__dirname, '../../views');
+  const printPartialPath = path.join(viewsDir, 'pages/print.ejs');
 
-    // ── Font setup ──
-    const arabicFontPath = path.join(__dirname, '../../public/fonts/arabic.ttf');
-    let hasArabicFont = false;
-    try {
-      if (fs.existsSync(arabicFontPath)) {
-        doc.registerFont('Arabic', arabicFontPath);
-        hasArabicFont = true;
-      }
-    } catch (e) {
-      console.warn('Arabic font not available for PDF');
-    }
-
-    const fontR = (isArabic && hasArabicFont) ? 'Arabic' : 'Helvetica';
-    const fontB = (isArabic && hasArabicFont) ? 'Arabic' : 'Helvetica-Bold';
-
-    const pageW = 595.28; // A4 width in points
-    const contentW = pageW - margin * 2;
-
-    // ── Labels ──
-    const L = {
-      salesInvoice:    isArabic ? 'فاتورة مبيعات' : 'Sales Invoice',
-      simplifiedTitle: isArabic ? 'فاتورة ضريبية مبسطة' : 'Simplified Tax Invoice',
-      invoiceNo:       isArabic ? 'رقم الفاتورة' : 'Invoice No',
-      date:            isArabic ? 'التاريخ' : 'Date',
-      paymentMethod:   isArabic ? 'طريقة الدفع' : 'Payment Method',
-      seller:          isArabic ? 'البائع' : 'Seller',
-      customer:        isArabic ? 'العميل' : 'Customer',
-      address:         isArabic ? 'العنوان' : 'Address',
-      taxNumber:       isArabic ? 'الرقم الضريبي' : 'Tax Number',
-      phone:           isArabic ? 'الهاتف' : 'Phone',
-      items:           isArabic ? 'الصنف' : 'Items',
-      unit:            isArabic ? 'الوحدة' : 'Unit',
-      qty:             isArabic ? 'الكمية' : 'QTY',
-      price:           isArabic ? 'السعر' : 'Price',
-      total:           isArabic ? 'الإجمالي' : 'Total',
-      discount:        isArabic ? 'الخصم' : 'Discount',
-      tax:             isArabic ? 'الضريبة' : 'TAX',
-      net:             isArabic ? 'الصافي' : 'NET',
-      subtotal:        isArabic ? 'المجموع' : 'Subtotal',
-      taxableTotal:    isArabic ? 'الإجمالي الخاضع للضريبة' : 'Taxable Total',
-      vatAmount:       isArabic ? 'مبلغ الضريبة' : 'VAT',
-      netIncVat:       isArabic ? 'الصافي شامل الضريبة' : 'Net Including Tax',
-      terms:           isArabic ? 'الشروط والأحكام' : 'Terms & Conditions',
-      customerSig:     isArabic ? 'توقيع العميل' : 'Customer Signature',
-      recipient:       isArabic ? 'المستلم' : 'The Recipient',
-      ref:             isArabic ? 'المرجع' : 'REF',
-      hash:            '#',
-      barcode:         isArabic ? 'باركود' : 'Barcode',
-    };
-
-    const payLabel =
-      invoice.payment_method === 'cash' ? (isArabic ? 'نقدي' : 'Cash') :
-      invoice.payment_method === 'credit' ? (isArabic ? 'آجل' : 'Credit') :
-      invoice.payment_method === 'bank' ? (isArabic ? 'تحويل بنكي' : 'Bank Transfer') :
-      (invoice.payment_method || '');
-
-    const companyName = isArabic
-      ? (settings.company_name_ar || settings.company_name || '')
-      : (settings.company_name || '');
-    const companyAddr = isArabic
-      ? (settings.company_address_ar || settings.company_address || '')
-      : (settings.company_address || '');
-
-    const fmt = (n) => Number(n || 0).toFixed(2);
-    const align = isArabic ? 'right' : 'left';
-
-    let y = margin;
-
-    // ── Helper: horizontal line ──
-    function hLine(yPos, w) {
-      doc.moveTo(margin, yPos).lineTo(margin + (w || contentW), yPos).lineWidth(1).stroke('#333');
-    }
-    function hLineThin(yPos, w) {
-      doc.moveTo(margin, yPos).lineTo(margin + (w || contentW), yPos).lineWidth(0.5).stroke('#999');
-    }
-
-    // ══════════════════════════════════════════
-    // 1) HEADER (logo LEFT, company name RIGHT for matching image)
-    // ══════════════════════════════════════════
-    const logoPath = path.join(__dirname, '../../public/logo.png');
-    const logoW = 120;
-    const logoH = 100;
-    
-    // Logo always on LEFT, Company info always on RIGHT
-    const logoX = margin;
-    
-    if (fs.existsSync(logoPath)) {
-      try {
-        doc.image(logoPath, logoX, y, { width: logoW, height: logoH, fit: [logoW, logoH] });
-      } catch (e) {
-        console.warn('Failed to load logo for PDF:', e.message);
-      }
-    }
-    
-    // Company name and tagline
-    const compAlign = isArabic ? 'right' : 'left';
-    const compX = margin + logoW + 20;
-    const compW = contentW - logoW - 20;
-    doc.font(fontB).fontSize(isArabic ? 18 : 16);
-    doc.text(companyName || 'Company', compX, y, { width: compW, align: compAlign });
-    y += 22;
-    doc.font(fontR).fontSize(isArabic ? 11 : 9);
-    const tagline = isArabic ? 'حلول أعمال احترافية' : 'Professional Business Solutions';
-    doc.text(tagline, compX, y, { width: compW, align: compAlign });
-
-    y = y + 40;
-
-    // ══════════════════════════════════════════
-    // 2) INVOICE INFO & CUSTOMER
-    // ══════════════════════════════════════════
-    const halfW = contentW / 2 - 20;
-    
-    // For Arabic RTL: right side has customer, left side has invoice info
-    // For English LTR: left side has customer, right side has invoice info
-    const custX = isArabic ? (margin + halfW + 40) : margin;
-    const invX = isArabic ? margin : (margin + halfW + 40);
-    
-    const custY = y;
-    const infoRowH = 18;
-    const labelW = 70;
-    const gap = 8;
-    const valueW = halfW - labelW - gap;
-
-    // Customer info (single line per row to avoid overlap)
-    const custInfo = [
-      [L.customer, invoice.customer_name || '—'],
-      [L.phone, invoice.customer_phone || '—'],
-      [L.address, invoice.customer_address || '—'],
-      [L.taxNumber, invoice.customer_tax_number || '—'],
-    ];
-
-    let cy = custY;
-    const custAlign = isArabic ? 'right' : 'left';
-    custInfo.forEach(([label, val]) => {
-      doc.font(fontB).fontSize(isArabic ? 10 : 10);
-      if (isArabic) {
-        const valueX = custX;
-        const labelX = custX + valueW + gap;
-        doc.text(label + ':', labelX, cy, { width: labelW, align: 'right' });
-        doc.font(fontR).fontSize(isArabic ? 10 : 10);
-        doc.text(val, valueX, cy, { width: valueW, align: 'right' });
-      } else {
-        const labelX = custX;
-        const valueX = custX + labelW + gap;
-        doc.text(label + ':', labelX, cy, { width: labelW, align: 'left' });
-        doc.font(fontR).fontSize(isArabic ? 10 : 10);
-        doc.text(val, valueX, cy, { width: valueW, align: 'left' });
-      }
-      cy += infoRowH;
-    });
-
-    // Invoice info (single line per row)
-    let iy = custY;
-    const invInfo = [
-      [L.invoiceNo, invoice.invoice_no || '—'],
-      [L.date, invoice.date || '—'],
-    ];
-
-    invInfo.forEach(([label, val]) => {
-      doc.font(fontB).fontSize(isArabic ? 10 : 10);
-      if (isArabic) {
-        const valueX = invX;
-        const labelX = invX + valueW + gap;
-        doc.text(label + ':', labelX, iy, { width: labelW, align: 'right' });
-        doc.font(fontR).fontSize(isArabic ? 10 : 10);
-        doc.text(val, valueX, iy, { width: valueW, align: 'right' });
-      } else {
-        const labelX = invX;
-        const valueX = invX + labelW + gap;
-        doc.text(label + ':', labelX, iy, { width: labelW, align: 'left' });
-        doc.font(fontR).fontSize(isArabic ? 10 : 10);
-        doc.text(val, valueX, iy, { width: valueW, align: 'left' });
-      }
-      iy += infoRowH;
-    });
-    
-    y = Math.max(cy, iy) + 12;
-
-    // ── SIMPLIFIED TITLE BAR ──
-    const titleBarY = y + 5;
-    doc.rect(margin, titleBarY, contentW, 24).fill('#f1f2f6'); // Gray background
-    // doc.rect(margin, titleBarY, contentW, 24).lineWidth(1).stroke('#ddd'); // Top/Bottom border optional
-    doc.fillColor('#2c3e50').font(fontB).fontSize(isArabic ? 12 : 11);
-    
-    // Vertical center the text approx: (24 - fontSize)/2
-    const titleTextY = titleBarY + (24 - (isArabic ? 12 : 11)) / 2 - 2; 
-    doc.text(L.simplifiedTitle, margin, titleTextY, { width: contentW, align: 'center' });
-    
-    y = titleBarY + 35; // Move down after bar
-
-    // ══════════════════════════════════════════
-    // 3) ITEMS TABLE
-    // ══════════════════════════════════════════
-    const colsLTR = [
-      { key: '#',       w: 28,  label: '#' },
-      { key: 'name',    w: 140, label: L.items },
-      { key: 'unit',    w: 45,  label: L.unit },
-      { key: 'qty',     w: 38,  label: L.qty },
-      { key: 'price',   w: 57,  label: L.price },
-      { key: 'total',   w: 60,  label: L.total },
-      { key: 'disc',    w: 50,  label: L.discount },
-      { key: 'tax',     w: 45,  label: L.tax },
-      { key: 'net',     w: 60,  label: L.net },
-    ];
-    // Reverse column order for RTL (Arabic)
-    const cols = isArabic ? [...colsLTR].reverse() : colsLTR;
-    const tableW = cols.reduce((s, c) => s + c.w, 0);
-    const tableX = margin;
-    const rowH = isArabic ? 26 : 22;
-
-    function drawTableHeader(startY) {
-      // Header background - Dark Blue
-      doc.rect(tableX, startY, tableW, rowH).fill('#2c3e50'); 
-      const hdrFontSize = isArabic ? 10 : 9;
-      doc.fillColor('#fff').font(fontB).fontSize(hdrFontSize);
-      let cx = tableX;
-      
-      const headerTextY = startY + (rowH - hdrFontSize) / 2 - 2;
-
-      cols.forEach(col => {
-        doc.text(col.label, cx + 3, headerTextY, { width: col.w - 6, align: 'center' });
-        cx += col.w;
-      });
-      
-      // Vertical lines
-      // Note: stroke needs to be set again because fill changed color
-      doc.lineWidth(0.5).strokeColor('#ccc'); 
-      cx = tableX;
-      cols.forEach(col => {
-        doc.moveTo(cx, startY).lineTo(cx, startY + rowH).lineWidth(0.5).stroke();
-        cx += col.w;
-      });
-      doc.moveTo(cx, startY).lineTo(cx, startY + rowH).lineWidth(0.5).stroke();
-      // Bottom border for header
-      doc.moveTo(tableX, startY + rowH).lineTo(tableX + tableW, startY + rowH).lineWidth(0.5).stroke();
-      return startY + rowH;
-    }
-
-    function drawTableRow(startY, rowData, idx) {
-      const bg = idx % 2 === 0 ? '#fff' : '#fafafa';
-      doc.rect(tableX, startY, tableW, rowH).fill(bg);
-      doc.fillColor('#222').font(fontR).fontSize(isArabic ? 10 : 9);
-      let cx = tableX;
-      const qty = Number(rowData.quantity || 0);
-      const price = Number(rowData.unit_price || 0);
-      const discPct = Number(rowData.discount || 0);
-      const lineTotal = qty * price;
-      const discLabel = discPct.toFixed(2) + '%';
-      // Values in LTR order matching colsLTR keys
-      const valuesMap = {
-        '#': String(idx + 1),
-        'name': rowData.description || '',
-        'unit': rowData.unit || 'pc',
-        'qty': String(qty),
-        'price': fmt(price),
-        'total': fmt(lineTotal),
-        'disc': discLabel,
-        'tax': '—',
-        'net': fmt(rowData.amount),
-      };
-      const rowFontSize = isArabic ? 10 : 9;
-      const rowTextY = startY + (rowH - rowFontSize) / 2 - 2;
-      cols.forEach((col) => {
-        const val = valuesMap[col.key];
-        const colAlign = col.key === 'name' ? (isArabic ? 'right' : 'left') : 'center';
-        doc.text(val, cx + 3, rowTextY, { width: col.w - 6, align: colAlign });
-        cx += col.w;
-      });
-      // Vertical lines
-      cx = tableX;
-      cols.forEach(col => {
-        doc.moveTo(cx, startY).lineTo(cx, startY + rowH).lineWidth(0.5).stroke('#ccc');
-        cx += col.w;
-      });
-      doc.moveTo(cx, startY).lineTo(cx, startY + rowH).lineWidth(0.5).stroke('#ccc');
-      // Bottom line
-      doc.moveTo(tableX, startY + rowH).lineTo(tableX + tableW, startY + rowH).lineWidth(0.5).stroke('#ccc');
-      return startY + rowH;
-    }
-
-    y = drawTableHeader(y);
-    items.forEach((item, idx) => {
-      // Page break check
-      if (y + rowH > 780) {
-        doc.addPage();
-        y = margin;
-        y = drawTableHeader(y);
-      }
-      y = drawTableRow(y, item, idx);
-    });
-    if (items.length === 0) {
-      doc.font(fontR).fontSize(8).fillColor('#888');
-      doc.text('—', tableX, y + 4, { width: tableW, align: 'center' });
-      y += rowH;
-    }
-    y += 12;
-
-    // ══════════════════════════════════════════
-    // 4) TOTALS + QR
-    // ══════════════════════════════════════════
-    // Check if we need a new page for totals block
-    if (y + 140 > 780) {
-      doc.addPage();
-      y = margin;
-    }
-
-    const taxableTotal = Math.max((invoice.subtotal || 0) - (invoice.discount || 0), 0);
-    
-    // QR positioning - left for LTR, right for RTL
-    const qrSize = 100;
-    const qrX = isArabic ? (margin + contentW - qrSize) : margin;
-    const qrY = y;
-    const qrPath = path.join(__dirname, '../../public/QR.jpeg');
-    if (fs.existsSync(qrPath)) {
-      try {
-        doc.image(qrPath, qrX, qrY, { width: qrSize, height: qrSize, fit: [qrSize, qrSize] });
-      } catch (e) {
-        console.warn('Failed to load QR code for PDF:', e.message);
-        doc.rect(qrX, qrY, qrSize, qrSize).lineWidth(1).stroke('#ddd');
-        doc.font(fontB).fontSize(18).fillColor('#ccc');
-        doc.text('QR', qrX, qrY + qrSize / 2 - 12, { width: qrSize, align: 'center' });
-      }
-    } else {
-      doc.rect(qrX, qrY, qrSize, qrSize).lineWidth(1).stroke('#ddd');
-      doc.font(fontB).fontSize(18).fillColor('#ccc');
-      doc.text('QR', qrX, qrY + qrSize / 2 - 12, { width: qrSize, align: 'center' });
-    }
-    
-    // Totals table positioning - right for LTR, left for RTL
-    const totalsData = [
-      [L.discount,     'SAR ' + fmt(invoice.discount)],
-      [L.taxableTotal, 'SAR ' + fmt(taxableTotal)],
-      [L.vatAmount + ' ' + (invoice.vat_rate || 0) + '%', 'SAR ' + fmt(invoice.vat_amount)],
-      [L.netIncVat,    'SAR ' + fmt(invoice.total)],
-    ];
-
-    const totW = 320;
-    const totRowH = isArabic ? 32 : 24;
-    const totX = isArabic ? margin : (margin + contentW - totW);
-    let totY = y;
-    const totAlign = isArabic ? 'right' : 'left';
-    doc.fillColor('#222');
-
-    totalsData.forEach(([label, val], ti) => {
-      const isLast = ti === totalsData.length - 1;
-      const bg = ti % 2 === 0 ? '#fafafa' : '#fff';
-      const finalBg = isLast ? '#f0f0f0' : bg;
-      doc.rect(totX, totY, totW, totRowH).fill(finalBg).stroke('#ccc');
-      doc.fillColor('#333');
-      // For RTL: value on LEFT, label on RIGHT. For LTR: label on LEFT, value on RIGHT.
-      if (isArabic) {
-        // Value on the left side
-        const valFs = 11;
-        const valTextY = totY + (totRowH - valFs) / 2 - 2;
-        doc.fillColor('#222');
-        doc.font(fontB).fontSize(valFs);
-        doc.text(val, totX + 10, valTextY, { width: 115, align: 'left' });
-        // Label on the right side
-        const lblFs = isLast ? 12 : 11;
-        const lblTextY = totY + (totRowH - lblFs) / 2 - 2;
-        doc.fillColor('#333');
-        if (isLast) doc.font(fontB).fontSize(lblFs); else doc.font(fontR).fontSize(lblFs);
-        doc.text(label, totX + 130, lblTextY, { width: 180, align: 'right' });
-      } else {
-        const lblFs = isLast ? 12 : 10;
-        const lblTextY = totY + (totRowH - lblFs) / 2 - 2;
-        if (isLast) doc.font(fontB).fontSize(lblFs); else doc.font(fontR).fontSize(lblFs);
-        doc.text(label, totX + 10, lblTextY, { width: 180, align: 'left' });
-        const valFs = 10;
-        const valTextY = totY + (totRowH - valFs) / 2 - 2;
-        doc.fillColor('#222');
-        doc.font(fontB).fontSize(valFs);
-        doc.text(val, totX + 195, valTextY, { width: 115, align: 'right' });
-      }
-      totY += totRowH;
-    });
-
-    y = Math.max(qrY + qrSize, totY) + 18;
-    
-    // Divider line
-    doc.moveTo(margin, y).lineTo(margin + contentW, y).lineWidth(1).stroke('#333');
-    y += 18;
-
-    // ══════════════════════════════════════════
-    // 5) TERMS
-    // ══════════════════════════════════════════
-    const terms = isArabic
-      ? (settings.terms_conditions_ar || settings.terms_conditions || '')
-      : (settings.terms_conditions || '');
-
-    if (terms) {
-      if (y + 40 > 760) { doc.addPage(); y = margin; }
-      const termsAlign = isArabic ? 'right' : 'left';
-      doc.fillColor('#222').font(fontB).fontSize(isArabic ? 11 : 10);
-      doc.text(L.terms, margin, y, { width: contentW, align: termsAlign });
-      y += 16;
-      doc.font(fontR).fontSize(isArabic ? 9 : 8).fillColor('#444');
-      doc.text(terms, margin, y, { width: contentW, align: termsAlign, lineGap: 3 });
-    }
-
-    doc.end();
+  const partialHtml = await ejs.renderFile(printPartialPath, {
+    invoice,
+    items,
+    settings,
+    id: invoiceId,
+    isArabic: true,
+    autoprint: false,
   });
+
+  // ── Read CSS files to inline them ──
+  const cssDir = path.join(__dirname, '../../public/css');
+  const baseCss = fs.readFileSync(path.join(cssDir, 'base.css'), 'utf8');
+  const printCss = fs.readFileSync(path.join(cssDir, 'print.css'), 'utf8');
+  const rtlCss = fs.readFileSync(path.join(cssDir, 'rtl.css'), 'utf8');
+
+  // ── Inline images as base64 data URIs ──
+  function toDataUri(filePath, mime) {
+    try {
+      if (fs.existsSync(filePath)) {
+        const buf = fs.readFileSync(filePath);
+        return `data:${mime};base64,${buf.toString('base64')}`;
+      }
+    } catch (e) { /* ignore */ }
+    return '';
+  }
+
+  const logoDataUri = toDataUri(path.join(__dirname, '../../public/logo.png'), 'image/png');
+  const qrDataUri = toDataUri(path.join(__dirname, '../../public/QR.jpeg'), 'image/jpeg');
+
+  // Replace image src paths with data URIs
+  let html = partialHtml;
+  if (logoDataUri) html = html.replace(/src="\/logo\.png"/g, `src="${logoDataUri}"`);
+  if (qrDataUri) html = html.replace(/src="\/QR\.jpeg"/g, `src="${qrDataUri}"`);
+
+  // ── Build a full standalone HTML document ──
+  const fullHtml = `<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <style>${baseCss}</style>
+  <style>${printCss}</style>
+  <style>${rtlCss}</style>
+  <style>
+    /* PDF overrides */
+    body { margin: 0; padding: 0; background: #fff; }
+    nav, footer, .flash, .no-print { display: none !important; }
+    main { max-width: none; padding: 0; margin: 0; min-height: auto; }
+    .invoice { max-width: none; box-shadow: none; border: none; border-radius: 0; margin: 0; }
+  </style>
+</head>
+<body>
+  ${html}
+</body>
+</html>`;
+
+  // ── Launch Puppeteer and generate PDF ──
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      margin: { top: '8mm', right: '8mm', bottom: '8mm', left: '8mm' },
+      printBackground: true,
+    });
+    return Buffer.from(pdfBuffer);
+  } finally {
+    await browser.close();
+  }
 }
 
 /**

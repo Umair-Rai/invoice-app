@@ -1,8 +1,7 @@
 const { port } = require('./config');
-// Ensure DB is open and migrations run before app starts
-require('./db');
-const { migrate } = require('./db/migrate');
-migrate();
+// Ensure DB schema is created and migrations run before app starts
+const { initDb } = require('./db/init');
+initDb();
 
 const app = require('./app');
 

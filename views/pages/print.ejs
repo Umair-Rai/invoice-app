@@ -2,106 +2,122 @@
 <main><p>Print Invoice #<%= id %> &mdash; not found.</p></main>
 <% } else { %>
 <%
-  const ar = isArabic;
+  /* ── Always bilingual: Arabic + English ── */
   const L = {
-    salesInvoice:       ar ? 'فاتورة مبيعات'           : 'Sales Invoice',
-    simplifiedTitle:    ar ? 'فاتورة ضريبية مبسطة'     : 'Simplified Tax Invoice',
-    invoiceNo:          ar ? 'رقم الفاتورة'            : 'Invoice No',
-    date:               ar ? 'التاريخ'                 : 'Date',
-    paymentMethod:      ar ? 'طريقة الدفع'             : 'Payment Method',
-    seller:             ar ? 'البائع'                  : 'Seller',
-    customer:           ar ? 'العميل'                  : 'Customer',
-    address:            ar ? 'العنوان'                 : 'Address',
-    taxNumber:          ar ? 'الرقم الضريبي'           : 'Tax Number',
-    phone:              ar ? 'الهاتف'                  : 'Phone',
-    barcode:            ar ? 'باركود'                  : 'Barcode',
-    itemName:           ar ? 'الصنف'                   : 'Items',
-    unit:               ar ? 'الوحدة'                  : 'Unit',
-    qty:                ar ? 'الكمية'                  : 'QTY',
-    price:              ar ? 'السعر'                   : 'Price',
-    total:              ar ? 'الإجمالي'                : 'Total',
-    discount:           ar ? 'الخصم'                   : 'Discount',
-    tax:                ar ? 'الضريبة'                 : 'TAX',
-    net:                ar ? 'الصافي'                  : 'NET',
-    subtotal:           ar ? 'المجموع'                 : 'Subtotal',
-    taxableTotal:       ar ? 'الإجمالي الخاضع للضريبة' : 'Taxable Total',
-    vatAmount:          ar ? 'مبلغ الضريبة'            : 'VAT',
-    netIncVat:          ar ? 'الصافي شامل الضريبة'     : 'Net Including Tax',
-    terms:              ar ? 'الشروط والأحكام'         : 'Terms & Conditions',
-    customerSig:        ar ? 'توقيع العميل'            : 'Customer Signature',
-    recipient:          ar ? 'المستلم'                 : 'The Recipient',
-    ref:                ar ? 'المرجع'                  : 'REF',
-    cash:               ar ? 'نقدي'                    : 'Cash',
-    credit:             ar ? 'آجل'                     : 'Credit',
-    bank:               ar ? 'تحويل بنكي'              : 'Bank Transfer',
+    simplifiedTitle_ar: 'فاتورة ضريبية مبسطة',
+    invoiceNo_ar:       'رقم الفاتورة',
+    invoiceNo_en:       'Invoice No',
+    date_ar:            'التاريخ',
+    date_en:            'Date',
+    customer_ar:        'العميل',
+    customer_en:        'Customer',
+    address_ar:         'العنوان',
+    address_en:         'Address',
+    taxNumber_ar:       'الرقم الضريبي',
+    taxNumber_en:       'Tax Number',
+    phone_ar:           'الهاتف',
+    phone_en:           'Phone',
+    itemName_ar:        'الصنف',
+    itemName_en:        'Items',
+    unit_ar:            'الوحدة',
+    unit_en:            'Unit',
+    qty_ar:             'الكمية',
+    qty_en:             'QTY',
+    price_ar:           'السعر',
+    price_en:           'Price',
+    total_ar:           'الإجمالي',
+    total_en:           'Total',
+    discount_ar:        'الخصم',
+    discount_en:        'Discount',
+    tax_ar:             'الضريبة',
+    tax_en:             'TAX',
+    net_ar:             'الصافي',
+    net_en:             'NET',
+    taxableTotal_ar:    'الإجمالي الخاضع للضريبة',
+    taxableTotal_en:    'Taxable Total',
+    vatAmount_ar:       'مبلغ الضريبة',
+    vatAmount_en:       'VAT',
+    netIncVat_ar:       'الصافي شامل الضريبة',
+    netIncVat_en:       'Net Including Tax',
+    terms_ar:           'الشروط والأحكام',
+    terms_en:           'Terms & Conditions',
+    companyAddr_ar:     'عنوان الشركة',
+    companyAddr_en:     'Company Address',
+    companyNum_ar:      'رقم الشركة',
+    companyNum_en:      'Company Number',
   };
-  const payLabel = invoice.payment_method === 'cash' ? L.cash
-    : invoice.payment_method === 'credit' ? L.credit
-    : invoice.payment_method === 'bank' ? L.bank
-    : invoice.payment_method || '';
 
-  const companyName = ar
-    ? (settings.company_name_ar || settings.company_name || '')
-    : (settings.company_name || '');
-  const companyAddr = ar
-    ? (settings.company_address_ar || settings.company_address || '')
-    : (settings.company_address || '');
-  const termsText = ar
-    ? (settings.terms_conditions_ar || settings.terms_conditions || '')
-    : (settings.terms_conditions || '');
+  const companyNameAr = settings.company_name_ar || settings.company_name || '';
+  const companyNameEn = settings.company_name || '';
+  const companyAddr = settings.company_address_ar || settings.company_address || '';
+  const companyNum = settings.phone_1 || '';
+  const termsAr = settings.terms_conditions_ar || '';
+  const termsEn = settings.terms_conditions || '';
   const taxableTotal = ((invoice.subtotal || 0) - (invoice.discount || 0));
 
   function fmt(n) { return Number(n || 0).toFixed(2); }
 %>
 
-<div class="invoice <%= ar ? 'rtl' : '' %>" dir="<%= ar ? 'rtl' : 'ltr' %>">
+<div class="invoice bilingual">
 
-  <!-- ===== HEADER ===== -->
+  <!-- ===== HEADER (company name + logo) ===== -->
   <div class="inv-header">
-    <div class="inv-header-left">
-      <img src="/logo.png" alt="Logo" class="company-logo">
-    </div>
     <div class="inv-header-right">
-      <h1 class="inv-company-name"><%= companyName %></h1>
-      <p class="company-tagline"><%= ar ? 'حلول أعمال احترافية' : 'Professional Business Solutions' %></p>
+      <div class="inv-header-company">
+        <h1 class="inv-company-name"><%= companyNameEn %></h1>
+        <% if (companyNameAr && companyNameAr !== companyNameEn) { %>
+        <p class="inv-company-name-ar"><%= companyNameAr %></p>
+        <% } %>
+      </div>
+      <div class="inv-header-logo">
+        <img src="/logo.png" alt="Logo" class="company-logo">
+      </div>
     </div>
   </div>
 
-  <!-- ===== INVOICE INFO & CUSTOMER ===== -->
+  <!-- ===== INFO COLUMNS (LEFT: invoice/company, RIGHT: customer) ===== -->
   <div class="inv-info-section">
     <div class="inv-info-left">
       <div class="info-row">
-        <span class="info-label"><%= L.customer %>:</span>
-        <span class="info-value"><%= invoice.customer_name || '—' %></span>
+        <span class="info-value"><%= invoice.invoice_no %></span>
+        <span class="info-label">: <%= L.invoiceNo_en %> / <%= L.invoiceNo_ar %></span>
       </div>
       <div class="info-row">
-        <span class="info-label"><%= L.phone %>:</span>
-        <span class="info-value"><%= invoice.customer_phone || '—' %></span>
+        <span class="info-value"><%= companyAddr || '—' %></span>
+        <span class="info-label">: <%= L.companyAddr_en %> / <%= L.companyAddr_ar %></span>
       </div>
       <div class="info-row">
-        <span class="info-label"><%= L.address %>:</span>
-        <span class="info-value"><%= invoice.customer_address || '—' %></span>
+        <span class="info-value"><%= companyNum || '—' %></span>
+        <span class="info-label">: <%= L.companyNum_en %> / <%= L.companyNum_ar %></span>
       </div>
       <div class="info-row">
-        <span class="info-label"><%= L.taxNumber %>:</span>
-        <span class="info-value"><%= invoice.customer_tax_number || '—' %></span>
+        <span class="info-value"><%= invoice.date %></span>
+        <span class="info-label">: <%= L.date_en %> / <%= L.date_ar %></span>
       </div>
     </div>
     <div class="inv-info-right">
       <div class="info-row">
-        <span class="info-label"><%= L.invoiceNo %>:</span>
-        <span class="info-value"><%= invoice.invoice_no %></span>
+        <span class="info-value"><%= invoice.customer_name || '—' %></span>
+        <span class="info-label">: <%= L.customer_en %> / <%= L.customer_ar %></span>
       </div>
       <div class="info-row">
-        <span class="info-label"><%= L.date %>:</span>
-        <span class="info-value"><%= invoice.date %></span>
+        <span class="info-value"><%= invoice.customer_phone || '—' %></span>
+        <span class="info-label">: <%= L.phone_en %> / <%= L.phone_ar %></span>
+      </div>
+      <div class="info-row">
+        <span class="info-value"><%= invoice.customer_address || '—' %></span>
+        <span class="info-label">: <%= L.address_en %> / <%= L.address_ar %></span>
+      </div>
+      <div class="info-row">
+        <span class="info-value"><%= invoice.customer_tax_number || '—' %></span>
+        <span class="info-label">: <%= L.taxNumber_en %> / <%= L.taxNumber_ar %></span>
       </div>
     </div>
   </div>
 
   <!-- ===== SIMPLIFIED INVOICE TITLE BAR ===== -->
   <div class="inv-title-bar">
-    <h2><%= L.simplifiedTitle %></h2>
+    <h2><%= L.simplifiedTitle_ar %></h2>
   </div>
 
   <!-- ===== ITEMS TABLE ===== -->
@@ -109,14 +125,14 @@
     <thead>
       <tr>
         <th class="col-idx">#</th>
-        <th class="col-name"><%= L.itemName %></th>
-        <th class="col-unit"><%= L.unit %></th>
-        <th class="col-qty"><%= L.qty %></th>
-        <th class="col-price"><%= L.price %></th>
-        <th class="col-total"><%= L.total %></th>
-        <th class="col-disc"><%= L.discount %></th>
-        <th class="col-tax"><%= L.tax %></th>
-        <th class="col-net"><%= L.net %></th>
+        <th class="col-name"><span class="th-ar"><%= L.itemName_ar %></span><br><span class="th-en"><%= L.itemName_en %></span></th>
+        <th class="col-unit"><span class="th-ar"><%= L.unit_ar %></span><br><span class="th-en"><%= L.unit_en %></span></th>
+        <th class="col-qty"><span class="th-ar"><%= L.qty_ar %></span><br><span class="th-en"><%= L.qty_en %></span></th>
+        <th class="col-price"><span class="th-ar"><%= L.price_ar %></span><br><span class="th-en"><%= L.price_en %></span></th>
+        <th class="col-total"><span class="th-ar"><%= L.total_ar %></span><br><span class="th-en"><%= L.total_en %></span></th>
+        <th class="col-disc"><span class="th-ar"><%= L.discount_ar %></span><br><span class="th-en"><%= L.discount_en %></span></th>
+        <th class="col-tax"><span class="th-ar"><%= L.tax_ar %></span><br><span class="th-en"><%= L.tax_en %></span></th>
+        <th class="col-net"><span class="th-ar"><%= L.net_ar %></span><br><span class="th-en"><%= L.net_en %></span></th>
       </tr>
     </thead>
     <tbody>
@@ -150,30 +166,25 @@
     </div>
     <div class="inv-bottom-right">
       <table class="totals-table">
-        <% const totRows = [
-          [L.discount, 'SAR ' + fmt(invoice.discount)],
-          [L.taxableTotal, 'SAR ' + fmt(taxableTotal)],
-          [L.vatAmount + ' ' + (invoice.vat_rate || 0) + '%', 'SAR ' + fmt(invoice.vat_amount)],
-        ]; %>
-        <% totRows.forEach(function(r) { %>
         <tr>
-          <% if (ar) { %>
-            <td class="t-value"><%= r[1] %></td>
-            <td class="t-label"><%= r[0] %></td>
-          <% } else { %>
-            <td class="t-label"><%= r[0] %></td>
-            <td class="t-value"><%= r[1] %></td>
-          <% } %>
+          <td class="t-value">SAR <%= fmt(invoice.subtotal) %></td>
+          <td class="t-label"><%= L.total_ar %> / <%= L.total_en %></td>
         </tr>
-        <% }); %>
+        <tr>
+          <td class="t-value">SAR <%= fmt(invoice.discount) %></td>
+          <td class="t-label"><%= L.discount_ar %> / <%= L.discount_en %></td>
+        </tr>
+        <tr>
+          <td class="t-value">SAR <%= fmt(taxableTotal) %></td>
+          <td class="t-label"><%= L.taxableTotal_ar %> / <%= L.taxableTotal_en %></td>
+        </tr>
+        <tr>
+          <td class="t-value">SAR <%= fmt(invoice.vat_amount) %></td>
+          <td class="t-label"><%= L.vatAmount_ar %> / <%= L.vatAmount_en %> <%= (invoice.vat_rate || 0) %>%</td>
+        </tr>
         <tr class="total-row">
-          <% if (ar) { %>
-            <td class="t-value">SAR <%= fmt(invoice.total) %></td>
-            <td class="t-label"><%= L.netIncVat %></td>
-          <% } else { %>
-            <td class="t-label"><%= L.netIncVat %></td>
-            <td class="t-value">SAR <%= fmt(invoice.total) %></td>
-          <% } %>
+          <td class="t-value">SAR <%= fmt(invoice.total) %></td>
+          <td class="t-label"><%= L.netIncVat_ar %> / <%= L.netIncVat_en %></td>
         </tr>
       </table>
     </div>
@@ -183,10 +194,11 @@
   <div class="inv-divider"></div>
 
   <!-- ===== TERMS & CONDITIONS ===== -->
-  <% if (termsText) { %>
+  <% if (termsAr || termsEn) { %>
   <div class="inv-terms">
-    <h4><%= L.terms %></h4>
-    <p><%= termsText %></p>
+    <h4><%= L.terms_ar %> / <%= L.terms_en %></h4>
+    <% if (termsAr) { %><p class="terms-ar"><%= termsAr %></p><% } %>
+    <% if (termsEn && termsEn !== termsAr) { %><p class="terms-en"><%= termsEn %></p><% } %>
   </div>
   <% } %>
 </div>
