@@ -1,0 +1,156 @@
+<main class="settings-page">
+  <h1><%= title %></h1>
+
+  <form method="POST" action="/settings" class="settings-form" id="settings-form">
+    <section class="settings-card">
+      <h2>Company Information</h2>
+      <div class="form-group">
+        <label for="company_name_ar">Company Name</label>
+        <div class="input-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6"/><path d="M7 10h2M15 10h2"/></svg>
+          <input type="text" id="company_name_ar" name="company_name_ar" value="<%= (settings && settings.company_name_ar) || '' %>" dir="rtl" placeholder="Company Name">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="company_address_ar">Address</label>
+        <div class="input-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          <textarea id="company_address_ar" name="company_address_ar" rows="3" dir="rtl" placeholder="Full address"><%= (settings && settings.company_address_ar) || '' %></textarea>
+        </div>
+        <span class="form-hint">This address will appear on all invoices.</span>
+      </div>
+      <div class="form-group">
+        <label for="tax_number">VAT/Tax Number</label>
+        <div class="input-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 7h14M5 12h14M5 17h10"/><circle cx="19" cy="17" r="2"/></svg>
+          <input type="text" id="tax_number" name="tax_number" value="<%= (settings && settings.tax_number) || '' %>" placeholder="Tax number">
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label for="phone_1">Phone 1</label>
+          <div class="input-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.9 19.9 0 01-8.7-3.1 19.6 19.6 0 01-6-6A19.9 19.9 0 013 4.2 2 2 0 015 2h3a2 2 0 012 1.7c.1.8.2 1.6.4 2.3a2 2 0 01-.5 2L9 9a16 16 0 006 6l1-1a2 2 0 012-.5c.7.2 1.5.3 2.3.4A2 2 0 0122 16.9z"/></svg>
+            <input type="tel" id="phone_1" name="phone_1" value="<%= (settings && settings.phone_1) || '' %>" placeholder="+966 5x xxx xxxx">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="phone_2">Phone 2 (Optional)</label>
+          <div class="input-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.9 19.9 0 01-8.7-3.1 19.6 19.6 0 01-6-6A19.9 19.9 0 013 4.2 2 2 0 015 2h3a2 2 0 012 1.7c.1.8.2 1.6.4 2.3a2 2 0 01-.5 2L9 9a16 16 0 006 6l1-1a2 2 0 012-.5c.7.2 1.5.3 2.3.4A2 2 0 0122 16.9z"/></svg>
+            <input type="tel" id="phone_2" name="phone_2" value="<%= (settings && settings.phone_2) || '' %>" placeholder="+966 5x xxx xxxx">
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Company Logo</label>
+        <div class="logo-placeholder">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 14l2-2 3 3 3-4 3 5"/></svg>
+          </div>
+          <div class="logo-text">
+            <span class="logo-title">Logo upload</span>
+            <span class="form-hint">Coming soon</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-card">
+      <h2>Invoice Settings</h2>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label for="vat_rate">VAT %</label>
+          <div class="input-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+            <input type="number" id="vat_rate" name="vat_rate" min="0" max="100" step="0.01" value="<%= (settings && settings.vat_rate != null) ? settings.vat_rate : 15 %>">
+          </div>
+          <span class="form-hint">Default VAT rate applied to invoices.</span>
+        </div>
+        <div class="form-group">
+          <label for="invoice_prefix">Invoice Prefix</label>
+          <div class="input-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 9h14M5 15h14"/><path d="M9 3L7 21"/><path d="M17 3l-2 18"/></svg>
+            <input type="text" id="invoice_prefix" name="invoice_prefix" maxlength="12" value="<%= (settings && settings.invoice_prefix) || 'INV-' %>">
+          </div>
+          <span class="form-hint">Example: INV-0001</span>
+        </div>
+        <div class="form-group">
+          <label for="next_invoice_number">Next Invoice Number</label>
+          <div class="num-stepper">
+            <input type="number" id="next_invoice_number" name="next_invoice_number" min="1" step="1" value="<%= (settings && settings.next_invoice_number != null) ? settings.next_invoice_number : 1 %>">
+            <div class="num-stepper-buttons">
+              <button type="button" class="stepper-btn stepper-up" aria-label="Increase">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12l5-5 5 5"/></svg>
+              </button>
+              <button type="button" class="stepper-btn stepper-down" aria-label="Decrease">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 8l5 5 5-5"/></svg>
+              </button>
+            </div>
+          </div>
+          <span class="form-hint">Next invoice will use this number.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-card">
+      <h2>Terms and Conditions</h2>
+      <div class="form-group">
+        <label for="terms_conditions_ar">Default Terms (Optional)</label>
+        <textarea id="terms_conditions_ar" name="terms_conditions_ar" rows="6" dir="rtl" maxlength="1000"><%= (settings && settings.terms_conditions_ar) || '' %></textarea>
+        <div class="form-meta">
+          <span class="form-hint">These terms will appear at the bottom of all invoices.</span>
+          <span class="char-counter" id="terms-count">0 / 1000 characters</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-card">
+      <h2>Backup & Export</h2>
+      <div class="backup-grid">
+        <div class="backup-card">
+          <div class="backup-icon backup-icon-csv">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v6h6"/><path d="M8 14h8M8 18h5"/></svg>
+          </div>
+          <div class="backup-body">
+            <h3>Export Invoices as CSV</h3>
+            <p>Download invoice data in CSV format for import into spreadsheet apps.</p>
+          </div>
+          <a href="/backup/csv" class="settings-btn settings-btn-csv">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3v8"/><path d="M6 9l4 4 4-4"/><path d="M4 15h12"/></svg>
+            Export CSV
+          </a>
+          <span class="backup-meta">Last export: Never</span>
+        </div>
+        <div class="backup-card">
+          <div class="backup-icon backup-icon-db">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+          </div>
+          <div class="backup-body">
+            <h3>Full Database Backup</h3>
+            <p>Create a complete backup of your data including invoices, clients, and settings.</p>
+          </div>
+          <a href="/backup/db" class="settings-btn settings-btn-db">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3v8"/><path d="M6 9l4 4 4-4"/><path d="M4 15h12"/></svg>
+            Backup Database
+          </a>
+          <span class="backup-meta">Last backup: Never</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="settings-footer">
+      <div class="save-status" id="save-status">
+        <span class="status-dot status-saved" id="status-dot"></span>
+        <span id="status-text">All changes saved</span>
+      </div>
+      <div class="footer-actions">
+        <button type="button" class="settings-btn settings-btn-ghost" id="reset-settings-btn">Reset Changes</button>
+        <button type="submit" class="settings-btn settings-btn-primary">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10l4 4 8-8"/></svg>
+          Save Settings
+        </button>
+      </div>
+    </div>
+  </form>
+</main>

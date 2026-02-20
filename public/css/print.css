@@ -1,0 +1,367 @@
+/* ============================================================
+   INVOICE PRINT / SCREEN STYLES
+   ============================================================ */
+
+/* ---------- Arabic font ---------- */
+@font-face {
+  font-family: 'Cairo';
+  src: url('/fonts/Cairo-Variable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Invoice wrapper ---------- */
+.invoice {
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 12mm 14mm;
+  background: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', Arial, sans-serif;
+  font-size: 11px;
+  color: #222;
+  line-height: 1.5;
+}
+.invoice.rtl {
+  font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+  direction: rtl;
+  text-align: right;
+}
+
+/* ---------- Header (two-column) ---------- */
+.inv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+/* REMOVED .rtl .inv-header { flex-direction: row-reverse; } to match image (Logo left always) */
+
+.inv-header-left {
+  flex: 0 0 auto;
+}
+.inv-header-right {
+  flex: 1;
+  text-align: left;
+}
+.rtl .inv-header-right {
+  text-align: right;
+}
+.company-logo {
+  max-width: 160px;
+  max-height: 130px;
+  object-fit: contain;
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+.inv-company-name {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 6px 0;
+  color: #111;
+}
+.rtl .inv-company-name {
+  font-size: 24px;
+}
+.company-tagline {
+  font-size: 11px;
+  color: #666;
+  margin: 0;
+  font-weight: 400;
+}
+.rtl .company-tagline {
+  font-size: 12px;
+}
+/* ---------- Invoice Info Section ---------- */
+.inv-info-section {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  margin: 16px 0;
+  padding: 0;
+}
+.rtl .inv-info-section {
+  flex-direction: row-reverse;
+}
+.inv-info-left {
+  flex: 1;
+}
+.inv-info-right {
+  flex: 0 0 auto;
+  min-width: 200px;
+}
+.info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 11px;
+}
+.info-label {
+  font-weight: 600;
+  color: #333;
+  font-size: 10px;
+}
+.info-value {
+  color: #222;
+  font-size: 11px;
+}
+
+/* ---------- Title Bar (Simplified Tax Invoice) ---------- */
+.inv-title-bar {
+  background: #f1f2f6;
+  border-top: 2px solid #ddd;
+  border-bottom: 2px solid #ddd;
+  padding: 8px;
+  text-align: center;
+  margin: 15px 0;
+}
+.inv-title-bar h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+/* ---------- Items table ---------- */
+.inv-items {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 10px;
+}
+.rtl .inv-items {
+  direction: rtl;
+}
+.inv-items th,
+.inv-items td {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+.inv-items thead tr {
+  background: #2c3e50;
+  font-weight: 600;
+  font-size: 10px;
+  color: #fff;
+}
+.rtl .inv-items thead tr {
+  font-size: 11px;
+}
+.inv-items tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+.rtl .inv-items tbody tr {
+  font-size: 11px;
+}
+.inv-items .col-idx   { width: 35px; }
+.inv-items .col-name  { text-align: left; min-width: 150px; }
+.rtl .inv-items .col-name { text-align: right; }
+.inv-items .col-unit  { width: 60px; }
+.inv-items .col-qty   { width: 50px; }
+.inv-items .col-price { width: 80px; }
+.inv-items .col-total { width: 80px; }
+.inv-items .col-disc  { width: 70px; }
+.inv-items .col-tax   { width: 60px; }
+.inv-items .col-net   { width: 80px; }
+
+/* Numbers always LTR even in RTL context */
+.inv-items td.col-qty,
+.inv-items td.col-price,
+.inv-items td.col-total,
+.inv-items td.col-disc,
+.inv-items td.col-tax,
+.inv-items td.col-net,
+.inv-items td.col-idx,
+.t-value {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* ---------- Bottom: Totals + QR ---------- */
+.inv-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 30px;
+  margin: 16px 0;
+}
+.rtl .inv-bottom {
+  flex-direction: row-reverse;
+}
+.inv-bottom-left {
+  flex: 0 0 auto;
+}
+.inv-bottom-right {
+  flex: 1;
+  max-width: 380px;
+  margin-left: auto;
+}
+.rtl .inv-bottom-right {
+  margin-left: 0;
+  margin-right: auto;
+}
+.inv-qr-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qr-image {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border: 1px solid #ddd;
+}
+.totals-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.rtl .totals-table {
+  direction: rtl;
+}
+.totals-table td {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+}
+.t-label {
+  font-weight: 600;
+  background: #fafafa;
+  min-width: 200px;
+  color: #333;
+  text-align: left;
+}
+.rtl .t-label {
+  font-size: 12px;
+  text-align: right;
+}
+.t-value {
+  text-align: right;
+  font-weight: 600;
+  min-width: 130px;
+  color: #222;
+}
+.rtl .t-value {
+  text-align: left;
+  font-size: 12px;
+}
+.total-row td {
+  font-weight: 700;
+  font-size: 13px;
+  background: #f0f0f0;
+  border-top: 2px solid #999;
+}
+.rtl .total-row td {
+  font-size: 14px;
+}
+
+/* ---------- Divider ---------- */
+.inv-divider {
+  height: 1px;
+  background: #333;
+  margin: 20px 0;
+}
+
+/* ---------- Terms ---------- */
+.inv-terms {
+  margin: 12px 0 0;
+  padding: 0;
+  border: none;
+  font-size: 9px;
+  color: #444;
+  background: transparent;
+  line-height: 1.6;
+}
+.inv-terms h4 {
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #222;
+}
+.rtl .inv-terms h4 {
+  font-size: 12px;
+}
+.inv-terms p {
+  margin: 0;
+  white-space: pre-line;
+  line-height: 1.7;
+}
+.rtl .inv-terms p {
+  font-size: 10px;
+  line-height: 1.8;
+}
+
+/* ============================================================
+   PRINT MEDIA RULES
+   ============================================================ */
+@media print {
+  /* Hide app chrome */
+  nav,
+  footer,
+  .flash,
+  .no-print {
+    display: none !important;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Override main layout constraints */
+  main {
+    max-width: none;
+    padding: 0;
+    margin: 0;
+    min-height: auto;
+  }
+
+  .invoice {
+    max-width: none;
+    padding: 8mm 10mm;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+  }
+
+  /* Page settings */
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+
+  /* Keep totals together */
+  .inv-bottom {
+    page-break-inside: avoid;
+  }
+  .inv-terms {
+    page-break-inside: avoid;
+  }
+  .inv-signature {
+    page-break-inside: avoid;
+  }
+
+  /* Table header on each page */
+  .inv-items thead {
+    display: table-header-group;
+  }
+}
+
+/* ============================================================
+   SCREEN: add a card effect for on-screen viewing
+   ============================================================ */
+@media screen {
+  .invoice {
+    box-shadow: 0 1px 6px rgba(0,0,0,0.12);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin: 10px auto;
+  }
+}

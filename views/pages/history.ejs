@@ -1,0 +1,253 @@
+<main class="history-page">
+  <%
+    function fmtDate(d) {
+      if (!d) return '-';
+      var dt = new Date(d + 'T00:00:00');
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return months[dt.getMonth()] + ' ' + dt.getDate() + ', ' + dt.getFullYear();
+    }
+    function payIcon(m) {
+      if (!m) return { label: '-', icon: '' };
+      var v = m.toLowerCase().trim();
+      if (v === 'cash') return { label: 'Cash', cls: 'pay-cash' };
+      if (v === 'credit') return { label: 'Credit Card', cls: 'pay-credit' };
+      if (v === 'bank') return { label: 'Bank Transfer', cls: 'pay-bank' };
+      return { label: m, cls: 'pay-other' };
+    }
+  %>
+
+  <!-- Header -->
+  <div class="history-header">
+    <h1>History</h1>
+    <div class="lang-pills">
+      <button type="button" class="lang-pill <%= filters.lang === 'en' ? 'lang-pill-active' : '' %>" data-lang="en" form="history-filter-form">EN</button>
+      <button type="button" class="lang-pill <%= filters.lang === 'ar' ? 'lang-pill-active' : '' %>" data-lang="ar" form="history-filter-form">AR</button>
+      <input type="hidden" name="lang" id="lang-input" value="<%= filters.lang || 'ar' %>" form="history-filter-form">
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="filter-card">
+    <form method="GET" action="/history" class="filter-form" id="history-filter-form">
+      <div class="filter-row">
+        <div class="filter-group filter-search">
+          <label for="q">Search</label>
+          <div class="search-input-wrap">
+            <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="13" y1="13" x2="18" y2="18"/></svg>
+            <input type="text" id="q" name="q" value="<%= filters.q || '' %>" placeholder="Search invoice, customer name...">
+          </div>
+        </div>
+        <div class="filter-group filter-date">
+          <label for="from">From Date</label>
+          <input type="date" id="from" name="from" value="<%= filters.from || '' %>">
+        </div>
+        <div class="filter-group filter-date">
+          <label for="to">To Date</label>
+          <input type="date" id="to" name="to" value="<%= filters.to || '' %>">
+        </div>
+        <input type="hidden" name="status" value="<%= filters.status || 'active' %>">
+        <div class="filter-actions">
+          <button type="submit" class="btn-filter-search">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="13" y1="13" x2="18" y2="18"/></svg>
+            Search
+          </button>
+          <div class="export-dropdown-wrap">
+            <button type="button" class="btn-filter-export" id="export-toggle-btn">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 3v10m0 0l-3-3m3 3l3-3"/><path d="M3 14v2a1 1 0 001 1h12a1 1 0 001-1v-2"/></svg>
+              Export
+            </button>
+            <div class="export-dropdown" id="export-dropdown">
+              <button type="button" id="export-csv-btn" class="export-opt" disabled>CSV</button>
+              <button type="button" id="export-excel-btn" class="export-opt" disabled>Excel</button>
+              <button type="button" id="export-pdf-btn" class="export-opt" disabled>PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Hidden forms for export submissions -->
+  <form method="POST" action="/exports/csv" id="export-csv-form" style="display: none;">
+    <div id="csv-ids-container"></div>
+  </form>
+  <form method="POST" action="/exports/excel" id="export-excel-form" style="display: none;">
+    <div id="excel-ids-container"></div>
+  </form>
+  <form method="POST" action="/exports/pdf" id="export-pdf-form" style="display: none;">
+    <div id="pdf-ids-container"></div>
+  </form>
+
+  <!-- Table Card -->
+  <div class="table-card">
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th class="col-check"><input type="checkbox" id="select-all" class="select-all-cb" title="Select all"></th>
+          <th>Invoice No</th>
+          <th>Name</th>
+          <th>Date</th>
+          <th>Payment Method</th>
+          <th class="col-total">Total</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (invoices && invoices.length > 0) { %>
+          <% invoices.forEach(function(inv) { %>
+            <% var isDel = inv.status === 'deleted' || inv.status === 'cancelled'; %>
+            <% var pay = payIcon(inv.payment_method); %>
+            <tr class="invoice-row <%= isDel ? 'row-deleted' : '' %>" data-id="<%= inv.id %>">
+              <td class="col-check">
+                <% if (!isDel) { %>
+                  <input type="checkbox" class="row-checkbox" name="ids[]" value="<%= inv.id %>">
+                <% } else { %>
+                  <span class="cell-muted">&mdash;</span>
+                <% } %>
+              </td>
+              <td class="cell-invoice-no">#<%= inv.invoice_no %></td>
+              <td class="cell-name"><%= inv.customer_name || '-' %></td>
+              <td class="cell-date"><%= fmtDate(inv.date) %></td>
+              <td class="cell-payment">
+                <span class="payment-badge <%= pay.cls %>">
+                  <% if (pay.cls === 'pay-cash') { %>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>
+                  <% } else if (pay.cls === 'pay-credit') { %>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M6 15h4"/></svg>
+                  <% } else if (pay.cls === 'pay-bank') { %>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M3 10h18M5 6l7-3 7 3"/><path d="M5 10v7M9 10v7M15 10v7M19 10v7"/><rect x="3" y="21" width="18" height="0"/></svg>
+                  <% } %>
+                  <span><%= pay.label %></span>
+                </span>
+              </td>
+              <td class="cell-total">SAR <%= Number(inv.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+              <td>
+                <% if (isDel) { %>
+                  <span class="status-badge status-deleted">Deleted</span>
+                <% } else { %>
+                  <span class="status-badge status-active">Active</span>
+                <% } %>
+              </td>
+              <td class="actions-cell">
+                <a href="/print/<%= inv.id %>?lang=<%= filters.lang || 'ar' %>" class="action-link" title="View">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="3"/></svg>
+                </a>
+                <% if (!isDel) { %>
+                  <a href="/edit/<%= inv.id %>" class="action-link" title="Edit">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.586 3.586a2 2 0 112.828 2.828l-8.793 8.793L4 16l.793-3.621 8.793-8.793z"/></svg>
+                  </a>
+                  <form method="POST" action="/history/delete/<%= inv.id %>" class="inline-delete-form">
+                    <input type="hidden" name="q" value="<%= filters.q || '' %>">
+                    <input type="hidden" name="from" value="<%= filters.from || '' %>">
+                    <input type="hidden" name="to" value="<%= filters.to || '' %>">
+                    <input type="hidden" name="status" value="<%= filters.status || 'active' %>">
+                    <input type="hidden" name="lang" value="<%= filters.lang || 'ar' %>">
+                    <input type="hidden" name="page" value="<%= page %>">
+                    <button type="submit" class="action-link action-delete" title="Delete" onclick="return confirm('Delete this invoice?');">
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M7 5V4a1 1 0 011-1h4a1 1 0 011 1v1M9 8v6M11 8v6"/><path d="M5 5l1 10a1 1 0 001 1h6a1 1 0 001-1l1-10"/></svg>
+                    </button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        <% } else { %>
+          <tr>
+            <td colspan="8" class="empty-state">
+              <svg class="empty-icon" viewBox="0 0 48 48" fill="none" stroke="#cbd5e1" stroke-width="1.5"><rect x="8" y="6" width="32" height="36" rx="3"/><line x1="16" y1="16" x2="32" y2="16"/><line x1="16" y1="22" x2="28" y2="22"/><line x1="16" y1="28" x2="24" y2="28"/></svg>
+              <p>No invoices found.</p>
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <% if (totalCount > 0) { %>
+    <div class="pagination-bar">
+      <% const totalPages = Math.ceil(totalCount / pageSize); %>
+      <% const startItem = (page - 1) * pageSize + 1; %>
+      <% const endItem = Math.min(page * pageSize, totalCount); %>
+      <% const queryBase = (filters.q ? 'q=' + encodeURIComponent(filters.q) + '&' : '') + (filters.from ? 'from=' + encodeURIComponent(filters.from) + '&' : '') + (filters.to ? 'to=' + encodeURIComponent(filters.to) + '&' : '') + (filters.status && filters.status !== 'active' ? 'status=' + encodeURIComponent(filters.status) + '&' : '') + (filters.lang && filters.lang !== 'ar' ? 'lang=' + encodeURIComponent(filters.lang) + '&' : ''); %>
+      <span class="pagination-info">Showing <strong><%= startItem %></strong> to <strong><%= endItem %></strong> of <strong><%= totalCount %></strong> results</span>
+      <nav class="pagination-nav">
+        <% if (page > 1) { %>
+          <a href="/history?<%= queryBase %>page=<%= page - 1 %>" class="page-btn page-prev">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 4 6 10 12 16"/></svg>
+            Previous
+          </a>
+        <% } else { %>
+          <span class="page-btn page-prev page-disabled">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 4 6 10 12 16"/></svg>
+            Previous
+          </span>
+        <% } %>
+        <span class="page-numbers">
+          <% for (let i = 1; i <= totalPages; i++) { %>
+            <% if (i === page) { %>
+              <span class="page-num page-current"><%= i %></span>
+            <% } else { %>
+              <a href="/history?<%= queryBase %>page=<%= i %>" class="page-num"><%= i %></a>
+            <% } %>
+          <% } %>
+        </span>
+        <% if (page < totalPages) { %>
+          <a href="/history?<%= queryBase %>page=<%= page + 1 %>" class="page-btn page-next">
+            Next
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 4 14 10 8 16"/></svg>
+          </a>
+        <% } else { %>
+          <span class="page-btn page-next page-disabled">
+            Next
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 4 14 10 8 16"/></svg>
+          </span>
+        <% } %>
+      </nav>
+    </div>
+  <% } %>
+
+  <!-- Summary Cards -->
+  <div class="summary-cards">
+    <div class="summary-card">
+      <div class="card-content">
+        <span class="card-label">Total Invoices</span>
+        <span class="card-value"><%= totalCount %></span>
+        <% if (typeof trends !== 'undefined' && trends) { %>
+          <span class="card-trend <%= trends.countChange >= 0 ? 'trend-up' : 'trend-down' %>">
+            <% if (trends.countChange >= 0) { %>
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 4l4 4H4z"/></svg>
+            <% } else { %>
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l4-4H4z"/></svg>
+            <% } %>
+            <%= Math.abs(trends.countChange) %>% from last month
+          </span>
+        <% } %>
+      </div>
+      <div class="card-icon card-icon-invoices">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="card-content">
+        <span class="card-label">Total Sales</span>
+        <span class="card-value">SAR <%= Number(summaryTotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
+        <% if (typeof trends !== 'undefined' && trends) { %>
+          <span class="card-trend <%= trends.salesChange >= 0 ? 'trend-up' : 'trend-down' %>">
+            <% if (trends.salesChange >= 0) { %>
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 4l4 4H4z"/></svg>
+            <% } else { %>
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l4-4H4z"/></svg>
+            <% } %>
+            <%= Math.abs(trends.salesChange) %>% from last month
+          </span>
+        <% } %>
+      </div>
+      <div class="card-icon card-icon-sales">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="/js/history.js"></script>

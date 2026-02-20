@@ -1,0 +1,17 @@
+<% if (typeof flash !== 'undefined' && flash) { %>
+  <% if (flash.saved) { %>
+    <div class="flash flash-ok">Invoice <%= flash.saved %> saved.</div>
+  <% } %>
+  <% if (flash.ok) { %>
+    <div class="flash flash-ok">Settings saved.</div>
+  <% } %>
+  <% if (flash.deleted) { %>
+    <div class="flash flash-ok">Invoice deleted.</div>
+  <% } %>
+  <% if (flash.updated) { %>
+    <div class="flash flash-ok">Invoice <%= flash.updated %> updated.</div>
+  <% } %>
+  <% if (flash.err) { %>
+    <div class="flash flash-err"><%= flash.err %></div>
+  <% } %>
+<% } %>

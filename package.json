@@ -1,0 +1,38 @@
+{
+  "name": "invoice-app",
+  "version": "1.0.0",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "postinstall": "electron-rebuild",
+    "init-db": "node server/db/init.js",
+    "start-server": "node -e \"require('./server/start.js').startServer().then(() => console.log('Server running'))\"",
+    "pack": "electron-builder --dir"
+  },
+  "dependencies": {
+    "archiver": "^6.0.1",
+    "better-sqlite3": "^9.2.2",
+    "ejs": "^3.1.9",
+    "electron": "^28.0.0",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "pdfkit": "^0.15.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.9.1",
+    "electron-rebuild": "^3.2.9"
+  },
+  "build": {
+    "appId": "com.invoiceapp.local",
+    "productName": "Invoice App",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ]
+  }
+}

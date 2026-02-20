@@ -1,0 +1,164 @@
+/* RTL overrides for Arabic invoice and app UI */
+
+/* General RTL body-level */
+.rtl,
+[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+  font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+}
+
+/* ── Navigation RTL overrides ── */
+.rtl .nav-container,
+[dir="rtl"] .nav-container {
+  flex-direction: row-reverse;
+}
+
+.rtl .nav-brand,
+[dir="rtl"] .nav-brand {
+  flex-direction: row-reverse;
+}
+
+.rtl .nav-links,
+[dir="rtl"] .nav-links {
+  flex-direction: row-reverse;
+}
+
+/* Invoice: bottom totals label alignment */
+.rtl .totals-table .t-label {
+  text-align: right;
+}
+
+/* Keep numbers LTR in RTL context */
+.rtl .inv-items td.col-qty,
+.rtl .inv-items td.col-price,
+.rtl .inv-items td.col-total,
+.rtl .inv-items td.col-disc,
+.rtl .inv-items td.col-tax,
+.rtl .inv-items td.col-net,
+.rtl .inv-items td.col-idx,
+.rtl .t-value {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: center;
+}
+
+/* ── History page RTL overrides ── */
+.rtl .history-header {
+  flex-direction: row-reverse;
+}
+
+.rtl .filter-row {
+  flex-direction: row-reverse;
+}
+
+.rtl .search-input-wrap .search-icon {
+  left: auto;
+  right: 0.75rem;
+}
+
+.rtl .search-input-wrap input {
+  padding-left: 0.875rem;
+  padding-right: 2.25rem;
+}
+
+.rtl .filter-actions {
+  flex-direction: row-reverse;
+}
+
+.rtl .export-dropdown {
+  right: auto;
+  left: 0;
+}
+
+.rtl .export-opt {
+  text-align: right;
+}
+
+.rtl .history-table th,
+.rtl .history-table td {
+  text-align: right;
+}
+
+.rtl .col-check {
+  text-align: center !important;
+}
+
+.rtl .cell-total,
+.rtl .col-total {
+  text-align: left !important;
+}
+
+.rtl .actions-cell {
+  flex-direction: row-reverse;
+}
+
+.rtl .pagination-bar {
+  flex-direction: row-reverse;
+}
+
+.rtl .pagination-nav {
+  flex-direction: row-reverse;
+}
+
+.rtl .page-prev svg {
+  transform: scaleX(-1);
+}
+
+.rtl .page-next svg {
+  transform: scaleX(-1);
+}
+
+.rtl .summary-card {
+  flex-direction: row-reverse;
+}
+
+.rtl .card-content {
+  align-items: flex-end;
+}
+
+.rtl .card-trend {
+  flex-direction: row-reverse;
+}
+
+/* Keep numbers LTR in history */
+.rtl .cell-invoice-no,
+.rtl .cell-total,
+.rtl .card-value,
+.rtl .card-trend {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* ── Home page RTL overrides ── */
+.rtl .home-page .input-icon-wrap svg {
+  left: auto;
+  right: 0.75rem;
+}
+
+.rtl .home-page .input-icon-wrap input {
+  padding-left: 0.75rem;
+  padding-right: 2.25rem;
+}
+
+.rtl .bottom-row {
+  direction: rtl;
+}
+
+.rtl .summary-row {
+  flex-direction: row-reverse;
+}
+
+.rtl .summary-row span:last-child {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.rtl .action-buttons {
+  flex-direction: row-reverse;
+}
+
+.rtl .input-prefix,
+.rtl .input-suffix {
+  flex-direction: row-reverse;
+}

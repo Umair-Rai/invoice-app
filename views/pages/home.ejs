@@ -1,0 +1,204 @@
+<main class="invoice-form home-page" data-vat-rate="<%= (settings && settings.vat_rate != null) ? settings.vat_rate : 15 %>" data-edit="<%= (typeof editMode !== 'undefined' && editMode) ? '1' : '0' %>">
+  <%
+    const isEdit = !!(typeof editMode !== 'undefined' && editMode);
+    const inv = (typeof editInvoice !== 'undefined' && editInvoice) ? editInvoice : {};
+    const itemRows = (typeof editItems !== 'undefined' && editItems && editItems.length > 0) ? editItems : null;
+    const formAction = isEdit ? ('/invoices/' + inv.id) : '/invoices';
+    const langValue = (typeof defaultLang !== 'undefined' && defaultLang) ? defaultLang : 'ar';
+  %>
+
+  <form method="POST" action="<%= formAction %>" id="invoice-form">
+    <div class="invoice-header home-header">
+      <h1><%= title %></h1>
+      <div class="lang-pills">
+        <button type="button" class="lang-pill <%= langValue === 'en' ? 'lang-pill-active' : '' %>" data-lang="en">EN</button>
+        <button type="button" class="lang-pill <%= langValue === 'ar' ? 'lang-pill-active' : '' %>" data-lang="ar">AR</button>
+        <input type="hidden" name="lang" id="lang-input" value="<%= langValue %>">
+      </div>
+    </div>
+
+    <section class="form-section card-section">
+      <h2>Customer Info</h2>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label for="customer_name">Customer Name *</label>
+          <div class="input-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 6-6 8-6s6.5 2 8 6"/></svg>
+            <input type="text" id="customer_name" name="customer_name" value="<%= inv.customer_name || '' %>" placeholder="Enter customer name" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="customer_phone">Phone Number</label>
+          <div class="input-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4h4l2 5-3 2a14 14 0 007 7l2-3 5 2v4c0 1-1 2-2 2-8 0-15-7-15-15 0-1 1-2 2-2z"/></svg>
+            <input type="text" id="customer_phone" name="customer_phone" value="<%= inv.customer_phone || '' %>" placeholder="Enter phone number">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="customer_address">Address</label>
+          <div class="input-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            <input type="text" id="customer_address" name="customer_address" value="<%= inv.customer_address || '' %>" placeholder="Enter customer address">
+          </div>
+        </div>
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label for="customer_tax_number">Tax Number</label>
+          <div class="input-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 9h16M4 15h16"/><path d="M9 4l-2 16M17 4l-2 16"/></svg>
+            <input type="text" id="customer_tax_number" name="customer_tax_number" value="<%= inv.customer_tax_number || '' %>" placeholder="Enter tax number">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="date">Invoice Date</label>
+          <div class="input-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+            <input type="date" id="date" name="date" value="<%= (inv.date || today) %>">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section card-section">
+      <h2>Items</h2>
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>Item Name</th>
+            <th>Unit</th>
+            <th>Qty</th>
+            <th>Price</th>
+            <th>Discount %</th>
+            <th>Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="items-tbody">
+          <% if (itemRows) { %>
+            <% itemRows.forEach(function(item, idx) { %>
+              <tr class="item-row" data-index="<%= idx %>">
+                <td><input type="text" name="items[<%= idx %>][name]" placeholder="Item name" value="<%= item.description || '' %>" required></td>
+                <td><input type="text" name="items[<%= idx %>][unit]" placeholder="Unit" value="<%= item.unit || 'pc' %>" required></td>
+                <td class="cell-qty">
+                  <div class="qty-stepper">
+                    <button type="button" class="qty-btn qty-minus">-</button>
+                    <input type="number" name="items[<%= idx %>][qty]" class="item-qty" min="1" step="1" value="<%= item.quantity || 1 %>" required>
+                    <button type="button" class="qty-btn qty-plus">+</button>
+                  </div>
+                </td>
+                <td class="cell-price">
+                  <div class="input-prefix">
+                  <span>SAR</span>
+                    <input type="number" name="items[<%= idx %>][price]" class="item-price" min="0" step="0.01" value="<%= item.unit_price || 0 %>">
+                  </div>
+                </td>
+                <td class="cell-discount">
+                  <div class="input-suffix">
+                    <input type="number" name="items[<%= idx %>][discount]" class="item-discount" min="0" max="100" step="0.01" value="<%= Number(item.discount || 0).toFixed(2) %>">
+                    <span>%</span>
+                  </div>
+                </td>
+                <td><input type="text" class="item-total" readonly value="<%= Number(item.amount || 0).toFixed(2) %>"></td>
+                <td>
+                  <button type="button" class="btn-remove-row" title="Remove row">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M7 5V4a1 1 0 011-1h4a1 1 0 011 1v1M9 8v6M11 8v6"/><path d="M5 5l1 10a1 1 0 001 1h6a1 1 0 001-1l1-10"/></svg>
+                  </button>
+                </td>
+              </tr>
+            <% }); %>
+          <% } else { %>
+            <tr class="item-row" data-index="0">
+              <td><input type="text" name="items[0][name]" placeholder="Item name" required></td>
+              <td><input type="text" name="items[0][unit]" placeholder="Unit" value="pc" required></td>
+              <td class="cell-qty">
+                <div class="qty-stepper">
+                  <button type="button" class="qty-btn qty-minus">-</button>
+                  <input type="number" name="items[0][qty]" class="item-qty" min="1" step="1" value="1" required>
+                  <button type="button" class="qty-btn qty-plus">+</button>
+                </div>
+              </td>
+              <td class="cell-price">
+                <div class="input-prefix">
+                <span>SAR</span>
+                  <input type="number" name="items[0][price]" class="item-price" min="0" step="0.01" value="0">
+                </div>
+              </td>
+              <td class="cell-discount">
+                <div class="input-suffix">
+                  <input type="number" name="items[0][discount]" class="item-discount" min="0" max="100" step="0.01" value="0">
+                  <span>%</span>
+                </div>
+              </td>
+              <td><input type="text" class="item-total" readonly value="0.00"></td>
+              <td>
+                <button type="button" class="btn-remove-row" title="Remove row">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M7 5V4a1 1 0 011-1h4a1 1 0 011 1v1M9 8v6M11 8v6"/><path d="M5 5l1 10a1 1 0 001 1h6a1 1 0 001-1l1-10"/></svg>
+                </button>
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+      <button type="button" id="add-item-btn" class="btn-add-link">
+        <span>+</span> Add Item
+      </button>
+    </section>
+
+    <div class="bottom-row">
+      <section class="form-section card-section">
+        <h2>Payment & Actions</h2>
+        <div class="form-group">
+          <label>Payment Method</label>
+          <div class="pay-cards">
+            <label class="pay-card <%= defaultPayment === 'cash' ? 'pay-selected' : '' %>">
+              <input type="radio" name="paymentMethod" value="cash" <%= defaultPayment === 'cash' ? 'checked' : '' %>>
+              <span class="pay-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg></span>
+              <span>Cash</span>
+            </label>
+            <label class="pay-card <%= defaultPayment === 'credit' ? 'pay-selected' : '' %>">
+              <input type="radio" name="paymentMethod" value="credit" <%= defaultPayment === 'credit' ? 'checked' : '' %>>
+              <span class="pay-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
+              <span>Credit</span>
+            </label>
+            <label class="pay-card <%= defaultPayment === 'bank' ? 'pay-selected' : '' %>">
+              <input type="radio" name="paymentMethod" value="bank" <%= defaultPayment === 'bank' ? 'checked' : '' %>>
+              <span class="pay-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M3 10h18M5 6l7-3 7 3"/><path d="M5 10v7M9 10v7M15 10v7M19 10v7"/></svg></span>
+              <span>Bank Transfer</span>
+            </label>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button type="button" class="btn-clear" id="clear-form-btn">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><line x1="7" y1="7" x2="13" y2="13"/><line x1="13" y1="7" x2="7" y2="13"/></svg>
+            Clear
+          </button>
+          <button type="submit" name="action" value="save" class="btn-save">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h10l2 2v10a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M6 4v4h8V4"/><path d="M6 16v-4h8v4"/></svg>
+            Save
+          </button>
+          <button type="submit" name="action" value="save_print" class="btn-save-print">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 7V3h8v4"/><rect x="4" y="9" width="12" height="6" rx="1"/><path d="M6 15v2h8v-2"/></svg>
+            Save & Print
+          </button>
+        </div>
+      </section>
+
+      <section class="form-section card-section total-summary">
+        <h2>Total Summary</h2>
+        <div class="summary-list">
+          <div class="summary-row"><span>Subtotal</span><span id="sum-subtotal">SAR 0.00</span></div>
+          <div class="summary-row"><span>Discount</span><span id="sum-discount">-SAR 0.00</span></div>
+          <div class="summary-row"><span>Taxable Amount</span><span id="sum-taxable">SAR 0.00</span></div>
+          <div class="summary-row"><span>VAT %</span><span id="sum-vat-rate"><%= (settings && settings.vat_rate != null) ? settings.vat_rate : 15 %></span></div>
+          <div class="summary-row summary-total"><span>Total (including VAT)</span><span id="sum-total">SAR 0.00</span></div>
+        </div>
+      </section>
+    </div>
+
+    <input type="hidden" id="discountValue" name="discountValue" value="0">
+  </form>
+</main>
+<script src="/js/home.js"></script>
