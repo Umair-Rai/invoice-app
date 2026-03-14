@@ -72,6 +72,7 @@
             <th>Qty</th>
             <th>Price</th>
             <th>Discount %</th>
+            <th>VAT</th>
             <th>Total</th>
             <th></th>
           </tr>
@@ -85,23 +86,65 @@
                 <td class="cell-qty">
                   <div class="qty-stepper">
                     <button type="button" class="qty-btn qty-minus">-</button>
-                    <input type="number" name="items[<%= idx %>][qty]" class="item-qty" min="1" step="1" value="<%= item.quantity || 1 %>" required>
+                    <input type="number" name="items[<%= idx %>][qty]" class="item-qty" min="1" value="<%= item.quantity || 1 %>" required>
                     <button type="button" class="qty-btn qty-plus">+</button>
                   </div>
                 </td>
                 <td class="cell-price">
                   <div class="input-prefix">
                   <span>SAR</span>
-                    <input type="number" name="items[<%= idx %>][price]" class="item-price" min="0" step="0.01" value="<%= item.unit_price || 0 %>">
+                    <input
+                      type="number"
+                      name="items[<%= idx %>][price]"
+                      class="item-price"
+                      min="0"
+                      step="any"
+                      value="<%= item.unit_price || 0 %>">
                   </div>
                 </td>
                 <td class="cell-discount">
                   <div class="input-suffix">
-                    <input type="number" name="items[<%= idx %>][discount]" class="item-discount" min="0" max="100" step="0.01" value="<%= Number(item.discount || 0).toFixed(2) %>">
+                    <input
+                      type="number"
+                      name="items[<%= idx %>][discount]"
+                      class="item-discount"
+                      min="0"
+                      max="100"
+                      step="any"
+                      value="<%= Number(item.discount || 0).toFixed(2) %>">
                     <span>%</span>
                   </div>
                 </td>
-                <td><input type="text" class="item-total" readonly value="<%= Number(item.amount || 0).toFixed(2) %>"></td>
+                <td class="cell-vat">
+                  <div class="input-prefix">
+                    <span>SAR</span>
+                    <input
+                      type="number"
+                      name="items[<%= idx %>][vat]"
+                      class="item-vat"
+                      min="0"
+                      step="any"
+                      value="<%= (function(){
+                      var amt = Number(item.amount || 0);
+                      var pct = (typeof item.vat_percent !== 'undefined' && item.vat_percent !== null) ? Number(item.vat_percent) : ((settings && settings.vat_rate != null) ? settings.vat_rate : 15);
+                      return Number(amt * (pct / 100)).toFixed(2);
+                    })() %>">
+                  </div>
+                  <input type="hidden" class="item-vat-pct" name="items[<%= idx %>][vat_percent]" value="<%= (typeof item.vat_percent !== 'undefined' && item.vat_percent !== null) ? Number(item.vat_percent).toFixed(2) : ((settings && settings.vat_rate != null) ? settings.vat_rate : 15) %>">
+                </td>
+                <td class="cell-total">
+                  <div class="input-prefix">
+                    <span>SAR</span>
+                    <input
+                      type="number"
+                      class="item-total"
+                      name="items[<%= idx %>][total]"
+                      min="0"
+                      step="any"
+                      value="<%= Number(item.amount || 0).toFixed(2) %>">
+                  </div>
+                  <input type="hidden" class="item-base-total" name="items[<%= idx %>][base_total]" value="<%= Number(item.amount || 0).toFixed(2) %>">
+                </td>
                 <td>
                   <button type="button" class="btn-remove-row" title="Remove row">
                     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M7 5V4a1 1 0 011-1h4a1 1 0 011 1v1M9 8v6M11 8v6"/><path d="M5 5l1 10a1 1 0 001 1h6a1 1 0 001-1l1-10"/></svg>
@@ -112,27 +155,69 @@
           <% } else { %>
             <tr class="item-row" data-index="0">
               <td><input type="text" name="items[0][name]" placeholder="Item name" required></td>
-              <td><input type="text" name="items[0][unit]" placeholder="Unit" value="pc" required></td>
+              <td><input type="text" name="items[0][unit]" placeholder="Unit" value="" required></td>
               <td class="cell-qty">
                 <div class="qty-stepper">
                   <button type="button" class="qty-btn qty-minus">-</button>
-                  <input type="number" name="items[0][qty]" class="item-qty" min="1" step="1" value="1" required>
+                  <input type="number" name="items[0][qty]" class="item-qty" min="1" placeholder="1" value="" required>
                   <button type="button" class="qty-btn qty-plus">+</button>
                 </div>
               </td>
               <td class="cell-price">
                 <div class="input-prefix">
                 <span>SAR</span>
-                  <input type="number" name="items[0][price]" class="item-price" min="0" step="0.01" value="0">
+                  <input
+                    type="number"
+                    name="items[0][price]"
+                    class="item-price"
+                    min="0"
+                    step="any"
+                    value=""
+                    placeholder="0">
                 </div>
               </td>
               <td class="cell-discount">
                 <div class="input-suffix">
-                  <input type="number" name="items[0][discount]" class="item-discount" min="0" max="100" step="0.01" value="0">
+                  <input
+                    type="number"
+                    name="items[0][discount]"
+                    class="item-discount"
+                    min="0"
+                    max="100"
+                    step="any"
+                    value=""
+                    placeholder="0">
                   <span>%</span>
                 </div>
               </td>
-              <td><input type="text" class="item-total" readonly value="0.00"></td>
+              <td class="cell-vat">
+                <div class="input-prefix">
+                  <span>SAR</span>
+                  <input
+                    type="number"
+                    name="items[0][vat]"
+                    class="item-vat"
+                    min="0"
+                    step="any"
+                    value=""
+                    placeholder="0">
+                </div>
+                <input type="hidden" class="item-vat-pct" name="items[0][vat_percent]" value="<%= (settings && settings.vat_rate != null) ? settings.vat_rate : 15 %>">
+              </td>
+              <td class="cell-total">
+                <div class="input-prefix">
+                  <span>SAR</span>
+                  <input
+                    type="number"
+                    class="item-total"
+                    name="items[0][total]"
+                    min="0"
+                    step="any"
+                    value=""
+                    placeholder="0">
+                </div>
+                <input type="hidden" class="item-base-total" name="items[0][base_total]" value="">
+              </td>
               <td>
                 <button type="button" class="btn-remove-row" title="Remove row">
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M7 5V4a1 1 0 011-1h4a1 1 0 011 1v1M9 8v6M11 8v6"/><path d="M5 5l1 10a1 1 0 001 1h6a1 1 0 001-1l1-10"/></svg>
@@ -192,7 +277,7 @@
           <div class="summary-row"><span>Subtotal</span><span id="sum-subtotal">SAR 0.00</span></div>
           <div class="summary-row"><span>Discount</span><span id="sum-discount">-SAR 0.00</span></div>
           <div class="summary-row"><span>Taxable Amount</span><span id="sum-taxable">SAR 0.00</span></div>
-          <div class="summary-row"><span>VAT %</span><span id="sum-vat-rate"><%= (settings && settings.vat_rate != null) ? settings.vat_rate : 15 %></span></div>
+          <div class="summary-row"><span>VAT (<%= (settings && settings.vat_rate != null) ? settings.vat_rate : 15 %>%)</span><span id="sum-vat-amount">SAR 0.00</span></div>
           <div class="summary-row summary-total"><span>Total (including VAT)</span><span id="sum-total">SAR 0.00</span></div>
         </div>
       </section>

@@ -2,6 +2,17 @@
   box-sizing: border-box;
 }
 
+/* Remove number input spinners from all number fields */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 @font-face {
   font-family: 'Cairo';
   src: url('/fonts/Cairo-Variable.ttf') format('truetype');

@@ -139,6 +139,9 @@
       <% items.forEach(function(item, i) { %>
       <% const lineTotal = (Number(item.quantity || 0) * Number(item.unit_price || 0)); %>
       <% const discPct = Number(item.discount || 0); %>
+      <% const netAmount = Number(item.amount || 0); %>
+      <% const vatRate = Number(invoice.vat_rate || 0) / 100; %>
+      <% const itemVat = netAmount * vatRate; %>
       <tr>
         <td class="col-idx"><%= i + 1 %></td>
         <td class="col-name"><%= item.description || '' %></td>
@@ -147,7 +150,7 @@
         <td class="col-price"><%= fmt(item.unit_price) %></td>
         <td class="col-total"><%= fmt(lineTotal) %></td>
         <td class="col-disc"><%= discPct.toFixed(2) %>%</td>
-        <td class="col-tax">—</td>
+        <td class="col-tax"><%= fmt(itemVat) %></td>
         <td class="col-net"><%= fmt(item.amount) %></td>
       </tr>
       <% }); %>

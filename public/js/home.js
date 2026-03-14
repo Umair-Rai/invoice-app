@@ -12,6 +12,7 @@
   var subtotalEl = document.getElementById('sum-subtotal');
   var discountEl = document.getElementById('sum-discount');
   var taxableEl = document.getElementById('sum-taxable');
+  var vatAmountEl = document.getElementById('sum-vat-amount');
   var totalEl = document.getElementById('sum-total');
 
   // Language pills
@@ -49,42 +50,220 @@
     return 'SAR ' + Number(n || 0).toFixed(2);
   }
 
+  var isProgrammaticUpdate = false;
+
+  function clampPercentage(pct) {
+    if (!Number.isFinite(pct)) pct = 0;
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+    return pct;
+  }
+
+  function normalizeNonNegative(val) {
+    var n = parseNum(val);
+    if (n < 0) n = 0;
+    return n;
+  }
+
+  function getVatPct(row) {
+    var vatPctInput = row.querySelector('.item-vat-pct');
+    var pct = parseNum(vatPctInput?.value);
+    if (!Number.isFinite(pct) || pct < 0) return vatRate;
+    return clampPercentage(pct);
+  }
+
+  function computeFromTotal(row, keepTotalAsEntered) {
+    var totalInput = row.querySelector('.item-total');
+    var vatAmountInput = row.querySelector('.item-vat');
+    var vatPctInput = row.querySelector('.item-vat-pct');
+    var priceInput = row.querySelector('.item-price');
+
+    var total = normalizeNonNegative(totalInput?.value);
+    var vatPct = getVatPct(row);
+
+    if (total === 0) {
+      isProgrammaticUpdate = true;
+      if (vatAmountInput) vatAmountInput.value = '';
+      if (priceInput) priceInput.value = '';
+      isProgrammaticUpdate = false;
+      return { netPrice: 0, total: 0 };
+    }
+
+    // total = discountedPrice + vat(discountedPrice)
+    // with no row-level discount, discountedPrice equals price
+    var price = round2(total / (1 + vatPct / 100));
+    var vat = round2(total - price);
+
+    isProgrammaticUpdate = true;
+    if (!keepTotalAsEntered && totalInput) {
+      totalInput.value = total === Math.floor(total) ? String(total) : total.toFixed(2);
+    }
+    if (vatAmountInput) {
+      vatAmountInput.value = vat === Math.floor(vat) ? String(vat) : vat.toFixed(2);
+    }
+    if (vatPctInput) {
+      vatPctInput.value = vatPct.toFixed(2);
+    }
+    if (priceInput) {
+      priceInput.value = price === Math.floor(price) ? String(price) : price.toFixed(2);
+    }
+    isProgrammaticUpdate = false;
+
+    return { netPrice: price, total: total };
+  }
+
+  function handleTotalChange(row) {
+    var totalInput = row.querySelector('.item-total');
+    if (totalInput && String(totalInput.value || '').trim() === '') {
+      isProgrammaticUpdate = true;
+      row.querySelector('.item-price') && (row.querySelector('.item-price').value = '');
+      row.querySelector('.item-vat') && (row.querySelector('.item-vat').value = '');
+      isProgrammaticUpdate = false;
+      return;
+    }
+    computeFromTotal(row, true);
+  }
+
+  function handleVatChange(row, formatEditedField) {
+    var totalInput = row.querySelector('.item-total');
+    var vatAmountInput = row.querySelector('.item-vat');
+    var vatPctInput = row.querySelector('.item-vat-pct');
+    var priceInput = row.querySelector('.item-price');
+
+    var total = normalizeNonNegative(totalInput?.value);
+    if (total === 0) {
+      isProgrammaticUpdate = true;
+      if (vatPctInput) vatPctInput.value = String(vatRate || 0);
+      if (priceInput) priceInput.value = '';
+      isProgrammaticUpdate = false;
+      return;
+    }
+    var vat = normalizeNonNegative(vatAmountInput?.value);
+    if (vat > total) vat = total;
+    vat = round2(vat);
+    var price = round2(total - vat);
+    var vatPct = total === 0 ? 0 : round2((vat / total) * 100);
+    vatPct = clampPercentage(vatPct);
+
+    isProgrammaticUpdate = true;
+    if (formatEditedField && vatAmountInput) vatAmountInput.value = vat === Math.floor(vat) ? String(vat) : vat.toFixed(2);
+    if (vatPctInput) vatPctInput.value = vatPct.toFixed(2);
+    if (priceInput) priceInput.value = price === Math.floor(price) ? String(price) : price.toFixed(2);
+    if (totalInput) totalInput.value = total === Math.floor(total) ? String(total) : total.toFixed(2);
+    var baseTotalInput = row.querySelector('.item-base-total');
+    if (baseTotalInput && total > 0) baseTotalInput.value = total.toFixed(2);
+    isProgrammaticUpdate = false;
+  }
+
+  function handlePriceChange(row, formatEditedField) {
+    var totalInput = row.querySelector('.item-total');
+    var vatAmountInput = row.querySelector('.item-vat');
+    var vatPctInput = row.querySelector('.item-vat-pct');
+    var priceInput = row.querySelector('.item-price');
+
+    var rawPrice = String(priceInput?.value || '').trim();
+    if (!rawPrice) {
+      isProgrammaticUpdate = true;
+      if (vatAmountInput) vatAmountInput.value = '';
+      if (totalInput) totalInput.value = '';
+      isProgrammaticUpdate = false;
+      return;
+    }
+
+    var price = normalizeNonNegative(rawPrice);
+    var vatPct = getVatPct(row);
+    var vat = round2(price * (vatPct / 100));
+    var total = round2(price + vat);
+
+    isProgrammaticUpdate = true;
+    if (formatEditedField && priceInput) priceInput.value = price === Math.floor(price) ? String(price) : price.toFixed(2);
+    if (vatAmountInput) vatAmountInput.value = vat === Math.floor(vat) ? String(vat) : vat.toFixed(2);
+    if (vatPctInput) vatPctInput.value = vatPct.toFixed(2);
+    if (totalInput) totalInput.value = total === Math.floor(total) ? String(total) : total.toFixed(2);
+    var baseTotalInput = row.querySelector('.item-base-total');
+    if (baseTotalInput && total > 0) baseTotalInput.value = total.toFixed(2);
+    isProgrammaticUpdate = false;
+  }
+
+  function handleDiscountChange(row, formatEditedField) {
+    var discountInput = row.querySelector('.item-discount');
+    var priceInput = row.querySelector('.item-price');
+    var vatPctInput = row.querySelector('.item-vat-pct');
+    var vatAmountInput = row.querySelector('.item-vat');
+    var totalInput = row.querySelector('.item-total');
+
+    var discountPct = clampPercentage(parseNum(discountInput?.value));
+    var price = normalizeNonNegative(priceInput?.value);
+    if (price === 0) {
+      isProgrammaticUpdate = true;
+      if (formatEditedField && discountInput) {
+        discountInput.value =
+          discountPct === Math.floor(discountPct) ? String(discountPct) : discountPct.toFixed(2);
+      }
+      isProgrammaticUpdate = false;
+      return;
+    }
+
+    var vatPct = getVatPct(row);
+    var discountedPrice = round2(Math.max(price - price * (discountPct / 100), 0));
+    var vat = round2(discountedPrice * (vatPct / 100));
+    var total = round2(discountedPrice + vat);
+
+    isProgrammaticUpdate = true;
+    if (formatEditedField && discountInput) {
+      discountInput.value =
+        discountPct === Math.floor(discountPct) ? String(discountPct) : discountPct.toFixed(2);
+    }
+    if (vatPctInput) vatPctInput.value = vatPct.toFixed(2);
+    if (vatAmountInput) {
+      vatAmountInput.value = vat === Math.floor(vat) ? String(vat) : vat.toFixed(2);
+    }
+    if (totalInput) {
+      totalInput.value = total === Math.floor(total) ? String(total) : total.toFixed(2);
+    }
+    isProgrammaticUpdate = false;
+  }
+
   function updateRow(row) {
-    var qty = parseNum(row.querySelector('.item-qty')?.value);
-    var price = parseNum(row.querySelector('.item-price')?.value);
-    var discPct = parseNum(row.querySelector('.item-discount')?.value);
-    if (discPct < 0) discPct = 0;
-    if (discPct > 100) discPct = 100;
+    var price = normalizeNonNegative(row.querySelector('.item-price')?.value);
+    var discPct = clampPercentage(parseNum(row.querySelector('.item-discount')?.value));
+    var discountAmount = round2(price * (discPct / 100));
+    var netPrice = round2(Math.max(price - discountAmount, 0));
+    var vatAmount = normalizeNonNegative(row.querySelector('.item-vat')?.value);
 
-    var lineTotal = round2(qty * price);
-    var discAmt = round2(lineTotal * (discPct / 100));
-    var netTotal = round2(Math.max(lineTotal - discAmt, 0));
-
-    var total = row.querySelector('.item-total');
-    if (total) total.value = netTotal.toFixed(2);
-    return { lineTotal: lineTotal, discountAmount: discAmt, netTotal: netTotal };
+    return {
+      price: price,
+      discountAmount: discountAmount,
+      netPrice: netPrice,
+      vatAmount: vatAmount,
+    };
   }
 
   function recalc() {
     var rows = tbody.querySelectorAll('.item-row');
-    var grossSubtotal = 0;
+    var priceSubtotal = 0;
     var discountSum = 0;
+    var netSubtotal = 0;
+    var vatAmount = 0;
     rows.forEach(function (row) {
       var totals = updateRow(row);
-      grossSubtotal += totals.lineTotal;
+      priceSubtotal += totals.price;
       discountSum += totals.discountAmount;
+      netSubtotal += totals.netPrice;
+      vatAmount += totals.vatAmount;
     });
-    grossSubtotal = round2(grossSubtotal);
+    priceSubtotal = round2(priceSubtotal);
     discountSum = round2(discountSum);
 
     var invoiceDiscount = parseNum(discountValueInput?.value);
-    var taxable = round2(Math.max(grossSubtotal - discountSum - invoiceDiscount, 0));
-    var vatAmount = round2(taxable * vatRate / 100);
+    var taxable = round2(Math.max(netSubtotal - invoiceDiscount, 0));
+    vatAmount = round2(vatAmount);
     var total = round2(taxable + vatAmount);
 
-    if (subtotalEl) subtotalEl.textContent = fmtMoney(grossSubtotal);
+    if (subtotalEl) subtotalEl.textContent = fmtMoney(priceSubtotal);
     if (discountEl) discountEl.textContent = '-' + fmtMoney(discountSum + invoiceDiscount);
     if (taxableEl) taxableEl.textContent = fmtMoney(taxable);
+    if (vatAmountEl) vatAmountEl.textContent = fmtMoney(vatAmount);
     if (totalEl) totalEl.textContent = fmtMoney(total);
   }
 
@@ -97,11 +276,19 @@
       var qtyInp = row.querySelector('input[name*="[qty]"]');
       var priceInp = row.querySelector('input[name*="[price]"]');
       var discInp = row.querySelector('input[name*="[discount]"]');
+      var vatInp = row.querySelector('.item-vat');
+      var vatPctInp = row.querySelector('.item-vat-pct');
+      var totalInp = row.querySelector('.item-total');
+      var baseTotalInp = row.querySelector('.item-base-total');
       if (nameInp) nameInp.name = 'items[' + i + '][name]';
       if (unitInp) unitInp.name = 'items[' + i + '][unit]';
       if (qtyInp) qtyInp.name = 'items[' + i + '][qty]';
       if (priceInp) priceInp.name = 'items[' + i + '][price]';
       if (discInp) discInp.name = 'items[' + i + '][discount]';
+      if (vatInp) vatInp.name = 'items[' + i + '][vat]';
+      if (vatPctInp) vatPctInp.name = 'items[' + i + '][vat_percent]';
+      if (totalInp) totalInp.name = 'items[' + i + '][total]';
+      if (baseTotalInp) baseTotalInp.name = 'items[' + i + '][base_total]';
     });
   }
 
@@ -113,11 +300,15 @@
     newRow.setAttribute('data-index', index);
     newRow.querySelectorAll('input').forEach(function (inp) {
       if (inp.name) inp.name = inp.name.replace(/\[\d+\]/, '[' + index + ']');
-      if (inp.classList.contains('item-total')) inp.value = '0.00';
-      else if (inp.classList.contains('item-qty')) inp.value = '1';
-      else if (inp.classList.contains('item-price')) inp.value = '0';
-      else if (inp.classList.contains('item-discount')) inp.value = '0';
-      else inp.value = inp.placeholder === 'Unit' ? 'pc' : '';
+      if (inp.classList.contains('item-total')) inp.value = '';
+      else if (inp.classList.contains('item-qty')) inp.value = '';
+      else if (inp.classList.contains('item-price')) inp.value = '';
+      else if (inp.classList.contains('item-discount')) inp.value = '';
+      else if (inp.classList.contains('item-vat')) inp.value = '';
+      else if (inp.classList.contains('item-vat-pct')) inp.value = String(vatRate || 0);
+      else if (inp.classList.contains('item-base-total')) inp.value = '';
+      else if (inp.placeholder === 'Unit') inp.value = '';
+      else if (!inp.classList.contains('item-vat-pct')) inp.value = '';
     });
     tbody.appendChild(newRow);
     reindexRows();
@@ -133,8 +324,43 @@
     recalc();
   }
 
-  tbody.addEventListener('input', recalc);
-  tbody.addEventListener('change', recalc);
+  tbody.addEventListener('input', function (e) {
+    if (isProgrammaticUpdate) return;
+    var target = e.target;
+    var row = target.closest('.item-row');
+    if (!row) return;
+
+    if (target.classList.contains('item-total')) {
+      handleTotalChange(row);
+    } else if (target.classList.contains('item-vat')) {
+      handleVatChange(row, false);
+    } else if (target.classList.contains('item-price')) {
+      handlePriceChange(row, false);
+    } else if (target.classList.contains('item-discount')) {
+      handleDiscountChange(row, false);
+    }
+
+    recalc();
+  });
+
+  tbody.addEventListener('change', function (e) {
+    if (isProgrammaticUpdate) return;
+    var target = e.target;
+    var row = target.closest('.item-row');
+    if (!row) return;
+
+    if (target.classList.contains('item-total')) {
+      handleTotalChange(row);
+    } else if (target.classList.contains('item-vat')) {
+      handleVatChange(row, true);
+    } else if (target.classList.contains('item-price')) {
+      handlePriceChange(row, true);
+    } else if (target.classList.contains('item-discount')) {
+      handleDiscountChange(row, true);
+    }
+
+    recalc();
+  });
   if (addBtn) addBtn.addEventListener('click', addRow);
   tbody.addEventListener('click', function (e) {
     if (e.target.classList.contains('btn-remove-row') || e.target.closest('.btn-remove-row')) {
@@ -164,6 +390,76 @@
       recalc();
     });
   }
+
+  function validateOnSave() {
+    var rows = tbody.querySelectorAll('.item-row');
+    var hasAnyItem = false;
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var nameVal = String(row.querySelector('input[name*="[name]"]')?.value ?? '').trim();
+      var qtyVal = row.querySelector('.item-qty')?.value;
+      var priceVal = row.querySelector('.item-price')?.value;
+      var unitVal = String(row.querySelector('input[name*="[unit]"]')?.value ?? '').trim();
+      var discountVal = row.querySelector('.item-discount')?.value;
+      if (nameVal || qtyVal !== undefined && qtyVal !== '' || priceVal !== undefined && priceVal !== '' || unitVal) {
+        hasAnyItem = true;
+        if (!nameVal) {
+          return { valid: false, message: 'Item ' + (i + 1) + ': name is required.' };
+        }
+        var qty = parseFloat(qtyVal);
+        if (!Number.isFinite(qty) || qty < 1) {
+          return { valid: false, message: 'Item ' + (i + 1) + ': quantity must be at least 1.' };
+        }
+        var price = parseFloat(priceVal);
+        if (!Number.isFinite(price) || price < 0) {
+          return { valid: false, message: 'Item ' + (i + 1) + ': price must be 0 or greater.' };
+        }
+        if (!unitVal) {
+          return { valid: false, message: 'Item ' + (i + 1) + ': unit is required.' };
+        }
+        var disc = discountVal === '' || discountVal === undefined || discountVal === null ? 0 : parseFloat(discountVal);
+        if (!Number.isFinite(disc) || disc < 0 || disc > 100) {
+          return { valid: false, message: 'Item ' + (i + 1) + ': discount must be 0 to 100.' };
+        }
+      }
+    }
+    if (!hasAnyItem) {
+      return { valid: false, message: 'At least one item is required.' };
+    }
+    return { valid: true };
+  }
+
+  function normalizeItemsForSubmit() {
+    var rows = tbody.querySelectorAll('.item-row');
+    rows.forEach(function (row) {
+      var nameVal = String(row.querySelector('input[name*="[name]"]')?.value ?? '').trim();
+      if (!nameVal) return;
+      var qtyInp = row.querySelector('.item-qty');
+      var priceInp = row.querySelector('.item-price');
+      var unitInp = row.querySelector('input[name*="[unit]"]');
+      var discountInp = row.querySelector('.item-discount');
+      if (qtyInp && (qtyInp.value === '' || !Number.isFinite(parseFloat(qtyInp.value)))) qtyInp.value = '1';
+      if (priceInp && (priceInp.value === '' || !Number.isFinite(parseFloat(priceInp.value)))) priceInp.value = '0';
+      if (unitInp && !unitInp.value.trim()) unitInp.value = 'pc';
+      if (discountInp && (discountInp.value === '' || !Number.isFinite(parseFloat(discountInp.value)))) discountInp.value = '0';
+    });
+  }
+
+  form.addEventListener('submit', function (e) {
+    if (form.dataset.validated === '1') {
+      delete form.dataset.validated;
+      return;
+    }
+    e.preventDefault();
+    var result = validateOnSave();
+    if (!result.valid) {
+      alert(result.message);
+      return;
+    }
+    normalizeItemsForSubmit();
+    form.dataset.validated = '1';
+    form.submit();
+  });
 
   recalc();
 })();
