@@ -4,9 +4,9 @@ const fs = require('fs');
 const ExcelJS = require('exceljs');
 const archiver = require('archiver');
 const ejs = require('ejs');
-const puppeteer = require('puppeteer');
 const { getInvoiceById } = require('./invoice.service');
 const { getSettings } = require('./settings.service');
+const { port } = require('../config');
 
 /**
  * Get invoices by IDs
@@ -189,7 +189,7 @@ async function exportInvoicesToExcel(invoiceIds) {
 }
 
 /**
- * Generate a PDF by rendering the print.ejs view and converting with Puppeteer.
+ * Generate a PDF using Electron's built-in printToPDF via a hidden BrowserWindow.
  * @param {number} invoiceId
  * @returns {Promise<Buffer>} PDF buffer
  */
@@ -199,85 +199,24 @@ async function generateInvoicePDF(invoiceId) {
     throw new Error('Invoice not found');
   }
 
-  const { invoice, items } = data;
-  const settings = getSettings();
+  const { BrowserWindow } = require('electron');
+  const printUrl = `http://127.0.0.1:${port}/print/${invoiceId}`;
 
-  // ── Render the print.ejs partial ──
-  const viewsDir = path.join(__dirname, '../../views');
-  const printPartialPath = path.join(viewsDir, 'pages/print.ejs');
-
-  const partialHtml = await ejs.renderFile(printPartialPath, {
-    invoice,
-    items,
-    settings,
-    id: invoiceId,
-    isArabic: true,
-    autoprint: false,
-  });
-
-  // ── Read CSS files to inline them ──
-  const cssDir = path.join(__dirname, '../../public/css');
-  const baseCss = fs.readFileSync(path.join(cssDir, 'base.css'), 'utf8');
-  const printCss = fs.readFileSync(path.join(cssDir, 'print.css'), 'utf8');
-  const rtlCss = fs.readFileSync(path.join(cssDir, 'rtl.css'), 'utf8');
-
-  // ── Inline images as base64 data URIs ──
-  function toDataUri(filePath, mime) {
-    try {
-      if (fs.existsSync(filePath)) {
-        const buf = fs.readFileSync(filePath);
-        return `data:${mime};base64,${buf.toString('base64')}`;
-      }
-    } catch (e) { /* ignore */ }
-    return '';
-  }
-
-  const logoDataUri = toDataUri(path.join(__dirname, '../../public/logo.png'), 'image/png');
-  const qrDataUri = toDataUri(path.join(__dirname, '../../public/QR.jpeg'), 'image/jpeg');
-
-  // Replace image src paths with data URIs
-  let html = partialHtml;
-  if (logoDataUri) html = html.replace(/src="\/logo\.png"/g, `src="${logoDataUri}"`);
-  if (qrDataUri) html = html.replace(/src="\/QR\.jpeg"/g, `src="${qrDataUri}"`);
-
-  // ── Build a full standalone HTML document ──
-  const fullHtml = `<!DOCTYPE html>
-<html lang="ar">
-<head>
-  <meta charset="UTF-8">
-  <style>${baseCss}</style>
-  <style>${printCss}</style>
-  <style>${rtlCss}</style>
-  <style>
-    /* PDF overrides */
-    body { margin: 0; padding: 0; background: #fff; }
-    nav, footer, .flash, .no-print { display: none !important; }
-    main { max-width: none; padding: 0; margin: 0; min-height: auto; }
-    .invoice { max-width: none; box-shadow: none; border: none; border-radius: 0; margin: 0; }
-  </style>
-</head>
-<body>
-  ${html}
-</body>
-</html>`;
-
-  // ── Launch Puppeteer and generate PDF ──
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  const win = new BrowserWindow({
+    show: false,
+    webPreferences: { contextIsolation: true, nodeIntegration: false },
   });
 
   try {
-    const page = await browser.newPage();
-    await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      margin: { top: '8mm', right: '8mm', bottom: '8mm', left: '8mm' },
+    await win.loadURL(printUrl);
+    const pdfBuffer = await win.webContents.printToPDF({
+      pageSize: 'A4',
+      marginsType: 1,
       printBackground: true,
     });
     return Buffer.from(pdfBuffer);
   } finally {
-    await browser.close();
+    win.destroy();
   }
 }
 
