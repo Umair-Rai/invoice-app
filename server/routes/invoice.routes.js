@@ -14,7 +14,7 @@ router.post('/', asyncHandler((req, res) => {
   }
   const { id, invoice_no } = createInvoice(result.data);
   if (result.action === 'save_print') {
-    return res.redirect('/print/' + id);
+    return res.redirect('/print/' + id + '?autoprint=1');
   }
   res.redirect('/?saved=' + encodeURIComponent(invoice_no));
 }));
@@ -29,7 +29,7 @@ router.post('/:id', asyncHandler((req, res) => {
   }
   const { id, invoice_no } = updateInvoice(Number(req.params.id), result.data);
   if (result.action === 'save_print') {
-    return res.redirect('/print/' + id);
+    return res.redirect('/print/' + id + '?autoprint=1');
   }
   res.redirect('/history?updated=' + encodeURIComponent(invoice_no));
 }));

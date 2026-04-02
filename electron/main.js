@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -28,6 +28,7 @@ async function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
@@ -37,6 +38,24 @@ async function createWindow() {
 
   win.loadURL(`http://127.0.0.1:${result.port}/`);
 }
+
+// Handle print request from renderer
+ipcMain.on('print-page', (event) => {
+  console.log('[main] IPC print-page received');
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) {
+    console.error('[main] Could not find BrowserWindow for sender');
+    return;
+  }
+  console.log('[main] Calling webContents.print()');
+  win.webContents.print({ silent: false, printBackground: true, landscape: false, pageSize: 'A4', deviceName: '' }, (success, errorType) => {
+    if (success) {
+      console.log('[main] print() succeeded');
+    } else {
+      console.error('[main] print() failed, errorType =', errorType);
+    }
+  });
+});
 
 app.whenReady().then(createWindow);
 

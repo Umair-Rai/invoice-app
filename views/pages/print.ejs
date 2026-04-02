@@ -206,7 +206,29 @@
   <% } %>
 </div>
 
+<script>
+  function triggerPrint() {
+    if (window.electronAPI && window.electronAPI.printPage) {
+      window.electronAPI.printPage();
+    } else {
+      window.print();
+    }
+  }
+</script>
+
 <% if (typeof autoprint !== 'undefined' && autoprint) { %>
-<script>window.onload = function() { window.print(); };</script>
+<script>
+  if (document.readyState === 'complete') {
+    setTimeout(triggerPrint, 500);
+  } else {
+    window.addEventListener('load', function() { setTimeout(triggerPrint, 500); });
+  }
+</script>
 <% } %>
+
+<div class="no-print" style="display:flex;gap:12px;justify-content:center;padding:20px 0;">
+  <button onclick="triggerPrint()" style="padding:10px 20px;background:#2c3e50;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">&#128424; Print Again</button>
+  <a href="/history" style="padding:10px 20px;background:#6c757d;color:#fff;border-radius:6px;text-decoration:none;font-size:14px;">Back to History</a>
+  <a href="/" style="padding:10px 20px;background:#27ae60;color:#fff;border-radius:6px;text-decoration:none;font-size:14px;">New Invoice</a>
+</div>
 <% } %>

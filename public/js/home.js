@@ -445,6 +445,12 @@
     });
   }
 
+  var lastSubmitBtn = null;
+  form.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[type="submit"], button:not([type])');
+    if (btn && form.contains(btn)) lastSubmitBtn = btn;
+  });
+
   form.addEventListener('submit', function (e) {
     if (form.dataset.validated === '1') {
       delete form.dataset.validated;
@@ -458,7 +464,12 @@
     }
     normalizeItemsForSubmit();
     form.dataset.validated = '1';
-    form.submit();
+    // Use requestSubmitter so the clicked button's name/value is included in POST body
+    if (lastSubmitBtn && typeof form.requestSubmit === 'function') {
+      form.requestSubmit(lastSubmitBtn);
+    } else {
+      form.submit();
+    }
   });
 
   recalc();
